@@ -49,10 +49,10 @@ Contributions, issues, and feature requests are welcome. See [CONTRIBUTING.md](C
  
 ## Community
  
-- **Discord**: [Join the conversation](https://discord.gg/INVITE_CODE)
 - **Email**: hello@makimoto.ai
 - **Issues**: Use [GitHub Issues](https://github.com/makimoto-ai/kawa/issues) for bugs and feature requests
 - **Security**: For security issues, see [SECURITY.md](SECURITY.md)
+- **Discord**: _Coming soon_
  
 ## Licence
  
