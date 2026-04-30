@@ -49,7 +49,7 @@ Contributions, issues, and feature requests are welcome. See [CONTRIBUTING.md](C
  
 ## Community
  
-- **Email**: hello@makimoto.ai
+- **Email**: contact@makimoto.ai
 - **Issues**: Use [GitHub Issues](https://github.com/makimoto-ai/kawa/issues) for bugs and feature requests
 - **Security**: For security issues, see [SECURITY.md](SECURITY.md)
 - **Discord**: _Coming soon_
