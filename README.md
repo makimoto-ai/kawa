@@ -66,7 +66,6 @@ Hosted in Singapore, Kawa keeps customer audio and transcripts in-country, suppo
 
 ## 🗺️ Roadmap
 
-- **Now:** post-conversation transcription API, the interactive playground, and the MIT-licensed orchestration layer.
 - **H2 2026:** real-time transcription API, a self-hostable pipeline, and more Asia-Pacific jurisdictions.
 - **2027:** progressive opening of all internal pipeline components.
 
