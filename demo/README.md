@@ -5,7 +5,8 @@ transcription API, and the sample app for integrating it: connect a token,
 submit a recording, watch it transcribe, and read the result, with the exact
 `curl` for every call shown alongside.
 
-<img width="1053" height="756" alt="image" src="https://github.com/user-attachments/assets/a351ea92-3875-4186-9ce4-a37a856bc245" />
+<img width="1158" height="766" alt="image" src="https://github.com/user-attachments/assets/733a7b02-6272-4966-8593-143504cc9841" />
+
 
 
 It is built on a small reference client, [`kawa_client.py`](kawa_client.py),
