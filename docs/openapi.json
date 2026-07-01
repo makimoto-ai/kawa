@@ -1,0 +1,542 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Makimoto Transcription API",
+    "version": "1.0.0",
+    "description": "Batched, server-side audio transcription. Upload an audio file, poll the job, and fetch the transcript once it is ready."
+  },
+  "servers": [
+    {
+      "url": "https://api.makimoto.ai",
+      "description": "Production API."
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Transcriptions",
+      "description": "Create and manage transcription jobs."
+    }
+  ],
+  "paths": {
+    "/v1/transcriptions": {
+      "post": {
+        "tags": [
+          "Transcriptions"
+        ],
+        "summary": "Create a transcription job",
+        "description": "Upload an audio file (multipart/form-data, max 10 MB, **MP3 or WAV only**). The job is submitted to the transcription pipeline and returns immediately with status `processing`; the transcript is delivered asynchronously and retrieved via `GET /v1/transcriptions/{job_id}`.",
+        "operationId": "createTranscription",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Audio file to transcribe (max 10 MB)."
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "Optional BCP-47 / ISO language hint.",
+                    "example": "en"
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "description": "Optional JSON-encoded object echoed back on the job. Must be a valid JSON string.",
+                    "example": "{\"call_id\":\"abc-123\"}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job accepted and submitted to the pipeline.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTranscriptionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No audio file provided, or `metadata` is not valid JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "413": {
+            "description": "File exceeds the 10 MB limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported audio format. Only MP3 and WAV are accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The job was stored but submission to the transcription pipeline failed. The job is marked `failed`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Transcriptions"
+        ],
+        "summary": "List the caller's transcription jobs",
+        "description": "Returns the caller's jobs, most recent first.",
+        "operationId": "listTranscriptions",
+        "responses": {
+          "200": {
+            "description": "List of the caller's jobs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptionList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v1/transcriptions/usage": {
+      "get": {
+        "tags": [
+          "Transcriptions"
+        ],
+        "summary": "Get the caller's transcription usage",
+        "description": "Returns the caller's transcription minute quota: total limit, minutes already consumed, and minutes remaining. Reflects the same quota state enforced on upload.",
+        "operationId": "getTranscriptionUsage",
+        "responses": {
+          "200": {
+            "description": "The caller's quota state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v1/transcriptions/{job_id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/JobId"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Transcriptions"
+        ],
+        "summary": "Get a transcription job",
+        "description": "Returns the job status. When `succeeded`, the `result` block is included; when `failed`, the `error` block is included.",
+        "operationId": "getTranscription",
+        "responses": {
+          "200": {
+            "description": "The job, with `result` (succeeded) or `error` (failed) when available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetTranscriptionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Transcriptions"
+        ],
+        "summary": "Delete a transcription job",
+        "description": "Removes the source audio from storage immediately and flags the job for scheduled deletion per the retention policy.",
+        "operationId": "deleteTranscription",
+        "responses": {
+          "202": {
+            "description": "Deletion accepted. Empty body."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Bearer token authentication.\n\nDuring the beta, retrieve a token from the Makimoto dashboard at https://makimoto.ai and send it as `Authorization: Bearer <token>`. Beta tokens are short-lived: while you are signed in the dashboard keeps your token current, and a token copied elsewhere does not refresh itself, so generate a fresh one when it expires. A `401` means the token is missing, expired, or revoked.\n\nFor production use, contact us at contact@makimoto.ai for persistent credentials (such as an API key or other service authentication) and higher volume limits."
+      }
+    },
+    "parameters": {
+      "JobId": {
+        "name": "job_id",
+        "in": "path",
+        "required": true,
+        "description": "The transcription job identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid bearer token.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "The job does not belong to the caller.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "No job with that identifier.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Internal server error.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "JobStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "processing",
+          "succeeded",
+          "failed"
+        ],
+        "description": "Lifecycle of a job: `queued` on creation, `processing` once submitted to the pipeline, then `succeeded` or `failed`."
+      },
+      "TranscriptSegment": {
+        "type": "object",
+        "required": [
+          "text",
+          "time_start",
+          "time_end",
+          "speaker_id",
+          "speaker_alias"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "time_start": {
+            "type": "number",
+            "format": "float",
+            "description": "Segment start, in seconds."
+          },
+          "time_end": {
+            "type": "number",
+            "format": "float",
+            "description": "Segment end, in seconds."
+          },
+          "speaker_id": {
+            "type": "integer"
+          },
+          "speaker_alias": {
+            "type": "string"
+          }
+        }
+      },
+      "TranscriptionResult": {
+        "type": "object",
+        "required": [
+          "language",
+          "duration_seconds",
+          "words_count",
+          "transcript"
+        ],
+        "properties": {
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "nullable": true
+          },
+          "words_count": {
+            "type": "integer",
+            "nullable": true
+          },
+          "transcript": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscriptSegment"
+            }
+          }
+        }
+      },
+      "JobError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "provider_error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "CreateTranscriptionResponse": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "received_at"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "example": {
+          "job_id": "12cd73fe-182c-4040-a9d5-55b676d6e1c3",
+          "status": "processing",
+          "received_at": "2026-06-11T19:13:22.366Z"
+        }
+      },
+      "GetTranscriptionResponse": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "result": {
+            "$ref": "#/components/schemas/TranscriptionResult"
+          },
+          "error": {
+            "$ref": "#/components/schemas/JobError"
+          }
+        }
+      },
+      "TranscriptionListItem": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "status",
+          "original_filename",
+          "language",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "original_filename": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TranscriptionList": {
+        "type": "object",
+        "required": [
+          "transcriptions"
+        ],
+        "properties": {
+          "transcriptions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranscriptionListItem"
+            }
+          }
+        }
+      },
+      "UsageResponse": {
+        "type": "object",
+        "required": [
+          "limit_minutes",
+          "used_minutes",
+          "remaining_minutes"
+        ],
+        "properties": {
+          "limit_minutes": {
+            "type": "number",
+            "description": "Total transcription minutes allowed.",
+            "example": 1000
+          },
+          "used_minutes": {
+            "type": "number",
+            "description": "Minutes already consumed (non-failed jobs).",
+            "example": 12.5
+          },
+          "remaining_minutes": {
+            "type": "number",
+            "description": "Minutes still available.",
+            "example": 987.5
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

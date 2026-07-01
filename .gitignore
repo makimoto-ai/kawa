@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv*/
+venv/
+env/
+
+# Local environment / secrets
+.env
+.env.local
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Sample audio: publish only the curated, attributed files. Recordings added
+# through the playground's "Add from device" land in this folder and must not
+# be committed (they are unattributed and may exceed the upload limit).
+/samples-audio/*
+!/samples-audio/ATTRIBUTION.md
+!/samples-audio/harvard.wav
+!/samples-audio/jackhammer.wav

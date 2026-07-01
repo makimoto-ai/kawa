@@ -1,0 +1,3 @@
+gradio>=6
+requests>=2.31
+numpy>=1.24
