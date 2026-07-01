@@ -72,6 +72,22 @@ Expected response for a new account:
 }
 ```
 
+Once you have submitted jobs, the list is populated, most recent first:
+
+```json
+{
+  "transcriptions": [
+    {
+      "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
+      "status": "succeeded",
+      "original_filename": "harvard.wav",
+      "language": "en",
+      "created_at": "2026-07-01T09:15:23.412Z"
+    }
+  ]
+}
+```
+
 ## 3. Submit a Recording Upload
 
 Upload an audio file as multipart form-data:
@@ -80,8 +96,8 @@ Upload an audio file as multipart form-data:
 UPLOAD_RESPONSE="$(
   curl -sS -X POST "${MAKIMOTO_API_URL}/v1/transcriptions" \
     -H "Authorization: Bearer ${MAKIMOTO_API_TOKEN}" \
-    -F "file=@samples-audio/audio.mp3" \
-    -F "language=es" \
+    -F "file=@samples-audio/harvard.wav" \
+    -F "language=en" \
     -F 'metadata={"source":"quickstart","external_id":"demo-001"}'
 )"
 
@@ -93,9 +109,9 @@ Expected response:
 
 ```json
 {
-  "job_id": "00000000-0000-0000-0000-000000000000",
+  "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
   "status": "queued",
-  "received_at": "2026-06-30T00:00:00.000Z"
+  "received_at": "2026-07-01T09:15:23.412Z"
 }
 ```
 
@@ -147,12 +163,12 @@ curl -sS "${MAKIMOTO_API_URL}/v1/transcriptions/${MAKIMOTO_JOB_ID}" \
   -H "Authorization: Bearer ${MAKIMOTO_API_TOKEN}" | jq
 ```
 
-Queued response:
+While the job runs, status moves from `queued` to `processing`:
 
 ```json
 {
-  "job_id": "00000000-0000-0000-0000-000000000000",
-  "status": "queued"
+  "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
+  "status": "processing"
 }
 ```
 
@@ -173,34 +189,40 @@ There is no separate transcript endpoint today. The transcript is returned from:
 GET /v1/transcriptions/{job_id}
 ```
 
-When the job succeeds, the response includes `result`:
+When the job succeeds, the response includes `result`. This is the transcript of
+the bundled `samples-audio/harvard.wav`, a single speaker reading Harvard
+sentences:
 
 ```json
 {
-  "job_id": "00000000-0000-0000-0000-000000000000",
+  "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
   "status": "succeeded",
   "result": {
-    "language": "es",
-    "duration_seconds": 42,
-    "words_count": 120,
+    "language": "en",
+    "duration_seconds": 18.4,
+    "words_count": 48,
     "transcript": [
-      {
-        "text": "Hola, esta es una prueba.",
-        "time_start": 0,
-        "time_end": 2.4,
-        "speaker_id": 0,
-        "speaker_alias": "Speaker 0"
-      }
+      { "text": "The birch canoe slid on the smooth planks.", "time_start": 0.0, "time_end": 3.1, "speaker_id": 0, "speaker_alias": "Speaker 0" },
+      { "text": "Glue the sheet to the dark blue background.", "time_start": 3.4, "time_end": 6.6, "speaker_id": 0, "speaker_alias": "Speaker 0" },
+      { "text": "It's easy to tell the depth of a well.", "time_start": 6.9, "time_end": 9.4, "speaker_id": 0, "speaker_alias": "Speaker 0" },
+      { "text": "These days a chicken leg is a rare dish.", "time_start": 9.8, "time_end": 12.6, "speaker_id": 0, "speaker_alias": "Speaker 0" },
+      { "text": "Rice is often served in round bowls.", "time_start": 13.0, "time_end": 15.4, "speaker_id": 0, "speaker_alias": "Speaker 0" },
+      { "text": "The juice of lemons makes fine punch.", "time_start": 15.8, "time_end": 18.4, "speaker_id": 0, "speaker_alias": "Speaker 0" }
     ]
   }
 }
 ```
 
+Because `harvard.wav` is a single speaker, every segment is `Speaker 0`. For
+multi-speaker audio each segment carries the detected `speaker_id` and
+`speaker_alias`, so a two-party call alternates between `Speaker 0`, `Speaker 1`,
+and so on.
+
 When the job fails, the response includes `error`:
 
 ```json
 {
-  "job_id": "00000000-0000-0000-0000-000000000000",
+  "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
   "status": "failed",
   "error": {
     "code": "bad_audio",
