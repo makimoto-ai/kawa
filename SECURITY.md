@@ -25,14 +25,14 @@ Once a fix is available, we will:
  
 ## Supported versions
  
-Kawa is in pre-launch. Once released, the security policy will identify which versions of the Kawa orchestration layer and managed APIs receive security updates.
+Kawa is live. Security updates apply to the current release of the Kawa orchestration layer and the managed APIs. As versioned releases are published, this section will list which versions receive security updates.
  
 ## Scope
  
 This policy applies to:
  
 - The Kawa orchestration layer source code in this repository
-- The Kawa managed APIs at api.makimoto.ai (once live)
+- The Kawa managed APIs at api.makimoto.ai
 - The Makimoto website at makimoto.ai
  
 Out of scope: third-party services, dependencies (please report to the relevant upstream project), and infrastructure providers.
