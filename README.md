@@ -23,6 +23,8 @@ Need more minutes, or have a regulated-sector or APAC-language use case? Email [
 
 ## 🎛️ Playground and reference client
 
+<img width="1158" height="766" alt="image" src="https://github.com/user-attachments/assets/ff99d002-d987-4193-9aaa-2b661d4452fd" />
+
 The [`demo/`](demo) directory is the sample app for the transcription API:
 
 | File | What it is |
