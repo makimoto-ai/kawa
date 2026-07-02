@@ -156,7 +156,11 @@ def _parse_metadata(raw: str) -> Dict[str, Any]:
 
 def _fmt_clock(seconds: float) -> str:
     seconds = max(0, int(round(seconds)))
-    return f"{seconds // 60}:{seconds % 60:02d}"
+    hours, rem = divmod(seconds, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
 
 
 def _human_size(num_bytes: int) -> str:
