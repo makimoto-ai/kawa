@@ -448,12 +448,22 @@ footer {{ display: none !important; }}
 HEAD = """
 <script>
 (function () {
+    function syncTheme(isDark) {
+        document.documentElement.classList.toggle('dark', isDark);
+        if (document.body) document.body.classList.toggle('dark', isDark);
+    }
+    var isDark = true;
   try {
     var pref = localStorage.getItem('mk-theme') || 'dark';
-    document.documentElement.classList.toggle('dark', pref !== 'light');
-  } catch (e) {
-    document.documentElement.classList.add('dark');
-  }
+        isDark = pref !== 'light';
+    } catch (e) {
+        isDark = true;
+    }
+    // Keep html and body in sync so first toggle after refresh does not drift.
+    syncTheme(isDark);
+    if (!document.body) {
+        document.addEventListener('DOMContentLoaded', function () { syncTheme(isDark); }, { once: true });
+    }
 })();
 </script>
 """
@@ -461,8 +471,10 @@ HEAD = """
 # Masthead toggle: flip the .dark class on <html>, persist the choice, no reload.
 THEME_TOGGLE_JS = """
 () => {
-  var dark = document.documentElement.classList.toggle('dark');
-  try { localStorage.setItem('mk-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    var isDark = document.documentElement.classList.contains('dark') || (document.body && document.body.classList.contains('dark'));
+    document.documentElement.classList.toggle('dark', !isDark);
+    if (document.body) document.body.classList.toggle('dark', !isDark);
+    try { localStorage.setItem('mk-theme', !isDark ? 'dark' : 'light'); } catch (e) {}
 }
 """
 
