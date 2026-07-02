@@ -450,7 +450,13 @@ HEAD = """
 (function () {
     function syncTheme(isDark) {
         document.documentElement.classList.toggle('dark', isDark);
-        if (document.body) document.body.classList.toggle('dark', isDark);
+        if (document.body) {
+            document.body.classList.toggle('dark', isDark);
+            return;
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            if (document.body) document.body.classList.toggle('dark', isDark);
+        }, { once: true });
     }
     var isDark = true;
   try {
@@ -461,9 +467,6 @@ HEAD = """
     }
     // Keep html and body in sync so first toggle after refresh does not drift.
     syncTheme(isDark);
-    if (!document.body) {
-        document.addEventListener('DOMContentLoaded', function () { syncTheme(isDark); }, { once: true });
-    }
 })();
 </script>
 """
