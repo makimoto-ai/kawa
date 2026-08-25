@@ -4,12 +4,12 @@
 
 [![Licence: MIT](https://img.shields.io/badge/Licence-MIT-blue.svg)](LICENSE)
 [![Status: Live](https://img.shields.io/badge/Status-Live-brightgreen.svg)](https://makimoto.ai)
-[![API docs](https://img.shields.io/badge/API-docs-6200EB.svg)](docs/api-authentication-quickstart.md)
+[![API docs](https://img.shields.io/badge/API-docs-6200EB.svg)](docs/service/authentication.md)
 [![Made in Singapore](https://img.shields.io/badge/Made%20in-Singapore-red.svg)](#-data-residency-and-sovereignty)
 
 **Kawa is live.** Makimoto Kawa is the first open-source conversational AI infrastructure built and hosted in Singapore, for teams working under APAC data-residency and regulatory requirements. The post-conversation transcription API and an interactive playground are available now.
 
-**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Quickstart](demo/QUICKSTART.md) · [API docs](docs/api-authentication-quickstart.md) · [Roadmap](ROADMAP.md)
+**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Quickstart](demo/QUICKSTART.md) · [API docs](docs/service/authentication.md) · [Roadmap](ROADMAP.md)
 
 ## 🚀 Get started
 
@@ -46,7 +46,7 @@ Submit a recording, poll the job, then read the transcript with speaker separati
 | `GET` | `/v1/transcriptions/{job_id}` | Job status, and the transcript once done |
 | `DELETE` | `/v1/transcriptions/{job_id}` | Remove a job (where supported) |
 
-Authenticate every request with `Authorization: Bearer <token>`. Full HTTP contract in [docs/api-authentication-quickstart.md](docs/api-authentication-quickstart.md); OpenAPI spec in [docs/openapi.json](docs/openapi.json).
+Authenticate every request with `Authorization: Bearer <token>`. Full HTTP contract in [docs/service/authentication.md](docs/service/authentication.md); OpenAPI spec in [docs/openapi.json](docs/openapi.json).
 
 ## 🧩 How it works
 
