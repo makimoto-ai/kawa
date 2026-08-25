@@ -38,8 +38,9 @@ import json
 import os
 import shutil
 import wave
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any
 
 import gradio as gr
 import numpy as np
@@ -54,7 +55,6 @@ from kawa_client import (
     KawaError,
     TranscriptResult,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Configuration
@@ -145,7 +145,7 @@ def _compact_metadata(raw: str) -> str:
     return json.dumps(parsed, separators=(",", ":"))
 
 
-def _parse_metadata(raw: str) -> Dict[str, Any]:
+def _parse_metadata(raw: str) -> dict[str, Any]:
     if not raw or not raw.strip():
         return {}
     parsed = json.loads(raw)
@@ -176,7 +176,7 @@ def _pretty_json(value: Any) -> str:
     return json.dumps(value, indent=2, sort_keys=True)
 
 
-def response_dump(status: Optional[int], headers: Dict[str, str], body: Any) -> str:
+def response_dump(status: int | None, headers: dict[str, str], body: Any) -> str:
     """A full response dump for the raw panel: status, headers, and parsed body.
 
     Showing the status and headers (not just the body) is what makes the panel
@@ -202,7 +202,7 @@ def error_dump(exc: Exception) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def list_samples(sample_dir: str | Path = ENV_SAMPLE_DIR) -> List[str]:
+def list_samples(sample_dir: str | Path = ENV_SAMPLE_DIR) -> list[str]:
     directory = Path(sample_dir).expanduser()
     if not directory.exists():
         return []
@@ -211,7 +211,7 @@ def list_samples(sample_dir: str | Path = ENV_SAMPLE_DIR) -> List[str]:
     )
 
 
-def sample_path(name: Optional[str], sample_dir: str | Path = ENV_SAMPLE_DIR) -> Optional[Path]:
+def sample_path(name: str | None, sample_dir: str | Path = ENV_SAMPLE_DIR) -> Path | None:
     if not name:
         return None
     directory = Path(sample_dir).expanduser()
@@ -480,7 +480,7 @@ def status_pill(text: str, kind: str = "") -> str:
     return f'<div class="mk-status {kind}"><span class="mk-dot"></span><span>{_esc(text)}</span></div>'
 
 
-def _decode_jwt(token: str) -> Optional[Dict[str, Any]]:
+def _decode_jwt(token: str) -> dict[str, Any] | None:
     token = (token or "").strip()
     parts = token.split(".")
     if len(parts) != 3:
@@ -537,7 +537,7 @@ def _envelope(path: Path, buckets: int = 200) -> np.ndarray:
     return env / peak
 
 
-def waveform_html(path: Optional[Path]) -> str:
+def waveform_html(path: Path | None) -> str:
     if not path or not path.exists():
         return '<div class="mk-wave empty">No audio selected. Choose a sample or upload a recording.</div>'
     env = _envelope(path)
@@ -570,15 +570,15 @@ def waveform_html(path: Optional[Path]) -> str:
     """
 
 
-def transcript_to_messages(result: TranscriptResult) -> List[Dict[str, str]]:
+def transcript_to_messages(result: TranscriptResult) -> list[dict[str, str]]:
     """Map transcript segments to chat messages, one bubble per segment.
 
     Each distinct speaker is pinned to a side of the conversation (the first
     speaker on the left, the next on the right) so a two-party call reads the
     way a chat does. Speaker name and timestamp sit at the top of each bubble.
     """
-    side_for_speaker: Dict[int, str] = {}
-    messages: List[Dict[str, str]] = []
+    side_for_speaker: dict[int, str] = {}
+    messages: list[dict[str, str]] = []
     for seg in result.segments:
         if seg.speaker_id not in side_for_speaker:
             side_for_speaker[seg.speaker_id] = "assistant" if len(side_for_speaker) % 2 == 0 else "user"
@@ -611,39 +611,39 @@ def _client(token: str, api_url: str) -> KawaClient:
     return KawaClient(token=token, api_url=api_url)
 
 
-def on_audio_change(file_path: Optional[str], api_url: str, language: str, metadata: str) -> Tuple[str, str]:
+def on_audio_change(file_path: str | None, api_url: str, language: str, metadata: str) -> tuple[str, str]:
     """Refresh the waveform and the matching curl snippet when audio changes."""
     path = Path(file_path) if file_path else None
     return waveform_html(path), curl_create(api_url, file_path or "", language, metadata)
 
 
 def on_sample_change(
-    name: Optional[str], api_url: str, language: str, metadata: str
-) -> Tuple[Any, str, str]:
+    name: str | None, api_url: str, language: str, metadata: str
+) -> tuple[Any, str, str]:
     """Load a bundled sample into the audio component."""
     path = sample_path(name)
     file_path = str(path) if path else None
     return file_path, waveform_html(path), curl_create(api_url, file_path or "", language, metadata)
 
 
-def on_curl_create(file_path: Optional[str], api_url: str, language: str, metadata: str) -> str:
+def on_curl_create(file_path: str | None, api_url: str, language: str, metadata: str) -> str:
     return curl_create(api_url, file_path or "", language, metadata)
 
 
 def transcribe(
-    file_path: Optional[str],
+    file_path: str | None,
     token: str,
     api_url: str,
     language: str,
     metadata: str,
-) -> Iterator[Tuple[str, List[Dict[str, str]], str, str, str, Any]]:
+) -> Iterator[tuple[str, list[dict[str, str]], str, str, str, Any]]:
     """Upload, then poll to completion, streaming UI updates as we go.
 
     Yields: (status_html, chat_messages, metrics_html, raw_json, job_id, raw_open)
     The last item toggles the raw-response accordion: expanded on an error so the
     status, headers and body are in view for debugging, collapsed otherwise.
     """
-    empty: List[Dict[str, str]] = []
+    empty: list[dict[str, str]] = []
     collapsed, expanded = gr.update(open=False), gr.update(open=True)
     if not (token or "").strip():
         yield status_pill("Add your API token under Connection to sign in.", "bad"), empty, "", "", "", collapsed
@@ -698,7 +698,7 @@ def transcribe(
     yield status_pill("Still processing after the polling window. Open it under Transcriptions to keep checking.", "pending"), empty, "", "", job_id, collapsed
 
 
-def list_transcriptions_view(token: str, api_url: str) -> Tuple[List[List[str]], Dict[str, Any], str, str]:
+def list_transcriptions_view(token: str, api_url: str) -> tuple[list[list[str]], dict[str, Any], str, str]:
     """List jobs for the Transcriptions tab.
 
     Returns: (table_rows, cache, list_status, list_curl)
@@ -710,8 +710,8 @@ def list_transcriptions_view(token: str, api_url: str) -> Tuple[List[List[str]],
     except (KawaError, requests.RequestException) as exc:
         return [], {}, status_pill(f"Could not list transcriptions: {exc}", "bad"), curl_list(api_url)
 
-    cache: Dict[str, Any] = {}
-    rows: List[List[str]] = []
+    cache: dict[str, Any] = {}
+    rows: list[list[str]] = []
     for job in jobs:
         cache[job.job_id] = job.raw
         result = job.result
@@ -727,8 +727,8 @@ def list_transcriptions_view(token: str, api_url: str) -> Tuple[List[List[str]],
 
 
 def open_transcript(
-    token: str, api_url: str, job_id: str, cache: Dict[str, Any]
-) -> Tuple[List[Dict[str, str]], str, str, str, str, str, Any]:
+    token: str, api_url: str, job_id: str, cache: dict[str, Any]
+) -> tuple[list[dict[str, str]], str, str, str, str, str, Any]:
     """Fetch one job and render it the same way as a fresh transcription.
 
     Returns: (chat, metrics, status, raw_json, curl_get, curl_delete, raw_open)
@@ -757,7 +757,7 @@ def open_transcript(
     return [], "", status_pill(f"{job.status.capitalize()}… fetch again shortly.", "pending"), raw, *curls, collapsed
 
 
-def select_row(cache: Dict[str, Any], evt: gr.SelectData) -> str:
+def select_row(cache: dict[str, Any], evt: gr.SelectData) -> str:
     """Return the job id of the clicked table row (last column)."""
     try:
         rows = list(cache.keys())
@@ -767,7 +767,7 @@ def select_row(cache: Dict[str, Any], evt: gr.SelectData) -> str:
         return ""
 
 
-def delete_transcript(token: str, api_url: str, job_id: str) -> Tuple[str, str]:
+def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     job_id = (job_id or "").strip()
     if not job_id:
         return status_pill("Paste a job id to delete.", "bad"), ""
@@ -778,7 +778,7 @@ def delete_transcript(token: str, api_url: str, job_id: str) -> Tuple[str, str]:
     return status_pill("Deleted", "good"), _pretty_json(body)
 
 
-def disconnect() -> Tuple[str, str, List[List[str]], Dict[str, Any], str]:
+def disconnect() -> tuple[str, str, list[list[str]], dict[str, Any], str]:
     """Clear the token and reset the playground."""
     return (
         "",                                     # token box
@@ -790,8 +790,8 @@ def disconnect() -> Tuple[str, str, List[List[str]], Dict[str, Any], str]:
 
 
 def add_sample_from_device(
-    uploaded: Optional[str], api_url: str, language: str, metadata: str
-) -> Tuple[Any, Any, str, str]:
+    uploaded: str | None, api_url: str, language: str, metadata: str
+) -> tuple[Any, Any, str, str]:
     """Copy a device file into the sample folder so it becomes a reusable option.
 
     The file is saved into MAKIMOTO_SAMPLE_DIR (a unique name is chosen if one
