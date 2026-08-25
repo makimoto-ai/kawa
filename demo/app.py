@@ -452,12 +452,18 @@ footer {{ display: none !important; }}
 HEAD = """
 <script>
 (function () {
-  try {
-    var pref = localStorage.getItem('mk-theme') || 'dark';
-    document.documentElement.classList.toggle('dark', pref !== 'light');
-  } catch (e) {
-    document.documentElement.classList.add('dark');
-  }
+    var pref = 'dark';
+    try { pref = localStorage.getItem('mk-theme') || 'dark'; } catch (e) {}
+    var isDark = pref !== 'light';
+
+    document.documentElement.classList.toggle('dark', isDark);
+    if (document.body) {
+        document.body.classList.toggle('dark', isDark);
+    } else {
+        document.addEventListener('DOMContentLoaded', function () {
+            if (document.body) document.body.classList.toggle('dark', isDark);
+        }, { once: true });
+    }
 })();
 </script>
 """
@@ -465,8 +471,10 @@ HEAD = """
 # Masthead toggle: flip the .dark class on <html>, persist the choice, no reload.
 THEME_TOGGLE_JS = """
 () => {
-  var dark = document.documentElement.classList.toggle('dark');
-  try { localStorage.setItem('mk-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    var isDark = !document.documentElement.classList.contains('dark');
+    document.documentElement.classList.toggle('dark', isDark);
+    if (document.body) document.body.classList.toggle('dark', isDark);
+    try { localStorage.setItem('mk-theme', isDark ? 'dark' : 'light'); } catch (e) {}
 }
 """
 
