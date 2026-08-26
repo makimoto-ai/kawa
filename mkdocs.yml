@@ -12,7 +12,8 @@ nav:
   - How It Works: concepts/index.md
   - Service:
       - Overview: service/index.md
-      - Authentication and quickstart: service/authentication.md
+      - Authentication: service/authentication.md
+      - Walkthrough: service/walkthrough.md
       - API Reference: service/api-reference.md
   - Contributing: CONTRIBUTING.md
 
