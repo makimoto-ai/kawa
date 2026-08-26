@@ -1,5 +1,7 @@
 # FAQ
 
+*Last updated: 2026-08-26*
+
 ## Requests, Limits, and Quota
 
 ### What audio formats are supported?

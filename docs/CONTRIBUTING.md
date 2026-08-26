@@ -1,5 +1,7 @@
 # Contributing to the Documentation
 
+*Last updated: 2026-08-26*
+
 This covers the documentation site specifically. For contributing to Kawa, see [CONTRIBUTING.md](https://github.com/makimoto-ai/kawa/blob/main/CONTRIBUTING.md) at the repository root.
 
 ## Where Documentation Lives
@@ -18,7 +20,7 @@ Change it the same way you'd change any other file here: a pull request against 
 !!! note "SDK documentation is imported, not written here"
     If you're changing SDK-facing content, that change belongs in the SDK's own repository, not here. This repository only aggregates and displays it.
 
-    As of now, no SDK repository exists yet, so this step isn't active.
+    The Python SDK's docs come from [makimoto-ai/makimoto-python](https://github.com/makimoto-ai/makimoto-python), pinned to a release tag in `.github/workflows/documentation.yml`.
 
 ## Previewing locally
 

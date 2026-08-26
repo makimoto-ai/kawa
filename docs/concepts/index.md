@@ -1,5 +1,7 @@
 # How It Works
 
+*Last updated: 2026-08-26*
+
 Kawa is a composable transcription pipeline. The first managed API, available now, handles post-conversation workloads: recorded calls, voicemail, and large-scale analysis of archived customer interactions. 
 
 A real-time API for live captioning, voice agents, and in-conversation analytics is planned; see the [roadmap](https://github.com/makimoto-ai/kawa/blob/main/ROADMAP.md).

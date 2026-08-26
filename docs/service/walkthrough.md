@@ -1,5 +1,7 @@
 # Walkthrough
 
+*Last updated: 2026-08-26*
+
 A worked walkthrough from an API token to a finished transcript, using `curl` directly against the HTTP API. See [Authentication](authentication.md) for how tokens work and how long they last. 
 
 If you'd rather use Python, the same flow is available through the [`KawaClient` reference client](https://github.com/makimoto-ai/kawa/blob/main/demo/README.md#using-kawaclient) or the no-UI [`quickstart.py`](https://github.com/makimoto-ai/kawa/blob/main/demo/quickstart.py) script.
