@@ -61,7 +61,7 @@ Example `202` Response:
 | Audio content | Must be decodable with a readable duration | `400 Bad Request` |
 | Account quota | 1000 minutes of audio per month on the free allowance (failed jobs are not counted) | `429 Too Many Requests` |
 
-Both single-channel (mono) and dual-channel (stereo) audio are accepted; see [Diarization](#diarization) below for how channel count affects speaker separation. 
+Both single-channel (mono) and dual-channel (stereo) audio are accepted; see [Diarisation](#diarisation) below for how channel count affects speaker separation. 
 
 !!! note 
     A supposed single-speaker mono audio file can actually be a stereo audio file, with mono audio duplicated in both channels (conversion could happen when downloading the audio, for instance). Therefore, the output may appear duplicated for both speakers, when there is only one speaker in the audio.
@@ -80,9 +80,9 @@ The 10 MB cap is reached at very different durations depending on encoding, so c
 !!! tip
     For anything longer than a short clip, try using MP3 or downmix WAV to mono to stay under the cap. The repository's `samples-audio/` directory contains ready-to-use test files in the supported formats.
 
-### Diarization
+### Diarisation
 
-Diarization is currently stereo-only: the pipeline splits the two channels (left/right) and diarizes by channel, rather than separating speakers within a single mixed signal. Each channel maps to a speaker index, labeled `speaker_id: 0` and `speaker_id: 1`.
+Diarisation is currently stereo-only: the pipeline splits the two channels (left/right) and diarises by channel, rather than separating speakers within a single mixed signal. Each channel maps to a speaker index, labeled `speaker_id: 0` and `speaker_id: 1`.
 
 ---
 
@@ -205,7 +205,7 @@ when `failed`, it includes an `error` block (`code`, `message`, and optionally a
 | `text` | The segment's transcribed text. |
 | `time_start` | Segment start, in seconds. |
 | `time_end` | Segment end, in seconds. |
-| `speaker_id` | Numeric speaker index from diarization. |
+| `speaker_id` | Numeric speaker index from diarisation. |
 | `speaker_alias` | Display label for the speaker. Current alias: `User`, `Agent` |
 
 `error`:

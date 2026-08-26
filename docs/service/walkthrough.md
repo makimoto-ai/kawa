@@ -2,7 +2,7 @@
 
 *Last updated: 2026-08-26*
 
-A worked walkthrough from an API token to a finished transcript, using `curl` directly against the HTTP API. See [Authentication](authentication.md) for how tokens work and how long they last. 
+A worked walkthrough from an API token to a finished transcript, using `curl` directly against the HTTP API. See [Authentication](authentication.md) for how tokens work and how long they last.
 
 If you'd rather use Python, the same flow is available through the [`KawaClient` reference client](https://github.com/makimoto-ai/kawa/blob/main/demo/README.md#using-kawaclient) or the no-UI [`quickstart.py`](https://github.com/makimoto-ai/kawa/blob/main/demo/quickstart.py) script.
 
@@ -98,7 +98,7 @@ While the job runs, status moves from `queued` to `processing`:
 }
 ```
 
-Recommended polling behavior:
+Recommended polling behaviour:
 
 - Poll `GET /v1/transcriptions/{job_id}` every 2 to 5 seconds while status is
   `queued` or `processing`.
@@ -137,9 +137,9 @@ When the job succeeds, the response includes `result`. This is the transcript of
 }
 ```
 
-Because `harvard.wav` is a single speaker, every segment is `User`. 
+Because `harvard.wav` is a single speaker, every segment is `User`.
 
-For multi-speaker audio each segment carries the detected `speaker_id` and `speaker_alias`, so a two-party call alternates between `User` and `Agent`. For more on diarization behavior, see [Diarization](api-reference.md#diarization) in the API Reference.
+For multi-speaker audio each segment carries the detected `speaker_id` and `speaker_alias`, so a two-party call alternates between `User` and `Agent`. For more on diarisation behaviour, see [Diarisation](api-reference.md#diarisation) in the API Reference.
 
 When the job fails, the response includes `error`:
 
