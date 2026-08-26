@@ -7,7 +7,7 @@ This covers the documentation site specifically. For contributing to Kawa, see [
 | Section | Path | Authoritative repository |
 | --- | --- | --- |
 | Home, Getting Started | `docs/index.md`, `docs/getting-started.md` | This repository (`kawa`) |
-| Concepts | `docs/concepts/` | This repository |
+| How It Works | `docs/concepts/` | This repository |
 | Service (API, authentication) | `docs/service/` | This repository |
 | SDKs | `docs/sdks/<name>/` | The corresponding SDK's own repository |
 

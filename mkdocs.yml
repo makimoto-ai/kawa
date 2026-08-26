@@ -13,6 +13,7 @@ nav:
   - Service:
       - Overview: service/index.md
       - Authentication and quickstart: service/authentication.md
+      - API Reference: service/api-reference.md
   - Contributing: CONTRIBUTING.md
 
 theme:
