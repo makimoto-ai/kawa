@@ -1,0 +1,19 @@
+/* Brand colours, verified against makimoto.ai's own CSS bundle and matching
+   demo/app.py's VIOLET/CYAN/navy definitions:
+     #010E39  deep navy   (site background, demo/app.py body_background_fill_dark)
+     #0a2a6e  lighter navy (site's own footer gradient stop)
+     #00F6FF  cyan        (site's primary CTA colour; demo/app.py CYAN)
+*/
+:root > * {
+  --md-primary-fg-color:        #010E39;
+  --md-primary-fg-color--light: #0a2a6e;
+  --md-primary-fg-color--dark:  #010A28;
+
+  --md-accent-fg-color:         #00F6FF;
+  --md-accent-fg-color--transparent: rgba(0, 246, 255, 0.1);
+
+  /* Material ties body-text link colour to --md-primary-fg-color by default,
+     which would make links a near-black navy on a white page. Keep the
+     header dark but use the lighter brand blue for legible inline links. */
+  --md-typeset-a-color: #1553d8;
+}
