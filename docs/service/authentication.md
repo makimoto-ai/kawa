@@ -1,8 +1,7 @@
 # Authentication
 
-This guide documents how to authenticate with the Makimoto transcription API.
-For a full worked example (create an account, submit a recording, poll,
-read the transcript), see [Walkthrough](walkthrough.md).
+This guide documents how to authenticate with the Makimoto transcription API. 
+For a full worked example (create an account, submit a recording, poll, read the transcript), see [Walkthrough](walkthrough.md).
 
 ## Authentication Model
 
