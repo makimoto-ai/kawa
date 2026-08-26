@@ -5,14 +5,12 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - "requirements.txt"
       - ".github/workflows/documentation.yml"
   push:
     branches: [main]
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - "requirements.txt"
       - ".github/workflows/documentation.yml"
   workflow_dispatch:
 
@@ -63,7 +61,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install documentation dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r docs/requirements.txt
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
