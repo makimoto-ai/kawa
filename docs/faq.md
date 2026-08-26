@@ -1,7 +1,5 @@
 # FAQ
 
-Short answers to questions that come up often, drawn from the rest of this site. Follow the links for full detail.
-
 ## Requests, Limits, and Quota
 
 ### What audio formats are supported?
