@@ -1,5 +1,7 @@
 # API Reference
 
+*Last updated: 2026-08-26*
+
 This page serves as a reference for all endpoints available for Kawa services.
 
 You may also refer to [`openapi.json`](https://github.com/makimoto-ai/kawa/blob/main/docs/openapi.json) in the Kawa repository.

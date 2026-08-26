@@ -1,5 +1,7 @@
 # Service
 
+*Last updated: 2026-08-26*
+
 Reference documentation for the Kawa transcription API itself: how to authenticate, the endpoints available, and their limits.
 
 - **[Authentication](authentication.md)** — the token model, lifetime and refresh, and beta vs. production access.

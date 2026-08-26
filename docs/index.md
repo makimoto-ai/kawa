@@ -1,5 +1,7 @@
 # Makimoto Kawa
 
+*Last updated: 2026-08-26*
+
 Kawa is Makimoto's open-source, Singapore-hosted transcription infrastructure for conversational AI in Asia-Pacific. This site documents the transcription API and the concepts behind the pipeline.
 
 ## Where To Go Next
