@@ -30,6 +30,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      # No automatic rebuild on SDK changes: bump `ref:` to a new release
+      # tag and push (or run workflow_dispatch after bumping it) to pick up
+      # SDK doc changes. See docs/CONTRIBUTING.md for contributor-facing detail.
       - name: Check out Python SDK
         uses: actions/checkout@v7
         with:
