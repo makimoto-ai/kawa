@@ -20,7 +20,7 @@ There are two ways to make your first call:
 
 ## 4. Submit, poll, and read a transcript
 
-The full request and response flow, including supported audio formats and size limits, is in [Authentication](service/authentication.md).
+The full request and response flow, including supported audio formats and size limits, is in [Walkthrough](service/walkthrough.md).
 
 In short:
 
@@ -28,7 +28,7 @@ In short:
 2. `GET /v1/transcriptions/{job_id}` every few seconds until `status` is `succeeded` or `failed`.
 3. Read the transcript from `result`, with speaker labels and segment-level timestamps.
 
-For more information on the available endpoints, see (placeholder).
+For every endpoint's full request/response detail, see the [API Reference](service/api-reference.md).
 
 ## Need more?
 
