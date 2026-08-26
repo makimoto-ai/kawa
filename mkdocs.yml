@@ -15,6 +15,7 @@ nav:
       - Authentication: service/authentication.md
       - Walkthrough: service/walkthrough.md
       - API Reference: service/api-reference.md
+  - FAQ: faq.md
   - Contributing: CONTRIBUTING.md
 
 theme:
