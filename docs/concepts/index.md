@@ -1,8 +1,10 @@
-# Concepts
+# How It Works
 
-Kawa is a composable transcription pipeline. The first managed API, available now, handles post-conversation workloads: recorded calls, voicemail, and large-scale analysis of archived customer interactions. A real-time API for live captioning, voice agents, and in-conversation analytics is planned; see the [roadmap](https://github.com/makimoto-ai/kawa/blob/main/ROADMAP.md).
+Kawa is a composable transcription pipeline. The first managed API, available now, handles post-conversation workloads: recorded calls, voicemail, and large-scale analysis of archived customer interactions. 
 
-Both modes run the same five stages, each replaceable so the pipeline can be tuned for a given language, domain, or latency budget.
+A real-time API for live captioning, voice agents, and in-conversation analytics is planned; see the [roadmap](https://github.com/makimoto-ai/kawa/blob/main/ROADMAP.md).
+
+Both run the same five stages, each replaceable so you can tune for your language, domain, or latency budget.
 
 ## The five stages
 
@@ -21,6 +23,6 @@ Both modes run the same five stages, each replaceable so the pipeline can be tun
 | Speaker alias | A per-job label (`Speaker 0`, `Speaker 1`, ...) assigned by diarisation. |
 | Post-conversation | Transcription of a recording after the conversation has ended, as opposed to real-time, in-call transcription. |
 
-## Data residency
+## Data Residency
 
 Kawa is hosted in Singapore and keeps customer audio and transcripts in-country, supporting organisations under Singapore's Personal Data Protection Act (PDPA) and sector frameworks including Monetary Authority of Singapore (MAS) guidelines.

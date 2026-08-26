@@ -5,7 +5,7 @@ Kawa is Makimoto's open-source, Singapore-hosted transcription infrastructure fo
 ## Where To Go Next
 
 - **[Getting Started](getting-started.md)** — Create an account, generate a token, and submit your first transcription.
-- **[Concepts](concepts/index.md)** — How the transcription pipeline is put together, and the terms used throughout this site.
+- **[How It Works](concepts/index.md)** — How the transcription pipeline is put together, and the terms used throughout this site.
 - **[Service](service/index.md)** — Authentication, the HTTP API, limits, and the OpenAPI specification.
 
 ## Project Links
