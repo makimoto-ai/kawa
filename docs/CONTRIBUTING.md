@@ -15,10 +15,10 @@ Service documentation, including the pipeline concepts and the API reference, is
 
 Change it the same way you'd change any other file here: a pull request against `main`.
 
-[!NOTE] 
-SDK documentation is imported, not written here. If you're changing SDK-facing content, that change belongs in the SDK's own repository, not here. This repository only aggregates and displays it. 
+!!! note "SDK documentation is imported, not written here"
+    If you're changing SDK-facing content, that change belongs in the SDK's own repository, not here. This repository only aggregates and displays it.
 
-As of now, no SDK repository exists yet, so this step isn't active.
+    As of now, no SDK repository exists yet, so this step isn't active.
 
 ## Previewing locally
 
