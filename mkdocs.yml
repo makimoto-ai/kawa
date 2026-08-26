@@ -9,7 +9,7 @@ edit_uri: edit/main/docs/
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Concepts: concepts/index.md
+  - How It Works: concepts/index.md
   - Service:
       - Overview: service/index.md
       - Authentication and quickstart: service/authentication.md
@@ -42,6 +42,9 @@ theme:
     - navigation.footer
     - content.code.copy
     - search.suggest
+
+plugins:
+  - search
 
 extra_css:
   - stylesheets/extra.css
