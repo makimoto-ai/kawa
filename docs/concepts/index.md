@@ -20,7 +20,7 @@ Both run the same five stages, each replaceable so you can tune for your languag
 | --- | --- |
 | Job | One submitted audio file, tracked through `queued`, `processing`, `succeeded`, or `failed`. |
 | Segment | One span of transcript text attributed to a single speaker, with start and end timestamps. |
-| Speaker alias | A per-job label (`Speaker 0`, `Speaker 1`, ...) assigned by diarisation. |
+| Speaker alias | A per-job label (`User`, `Agent`) assigned by diarisation. |
 | Post-conversation | Transcription of a recording after the conversation has ended, as opposed to real-time, in-call transcription. |
 
 ## Data Residency
