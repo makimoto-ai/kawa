@@ -42,4 +42,4 @@ By contributing to Kawa, you agree that your contributions will be licensed unde
  
 ## Questions
  
-For questions about contributing, reach out on Discord or email hello@makimoto.ai.
+For questions about contributing, reach out on Discord or email [contact@makimoto.ai](mailto:contact@makimoto.ai).

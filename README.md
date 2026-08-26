@@ -77,7 +77,7 @@ Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Al
 
 ## 💬 Community
 
-- 📧 **Email:** contact@makimoto.ai
+- 📧 **Email:** [contact@makimoto.ai](mailto:contact@makimoto.ai)
 - 🐛 **Issues:** [GitHub Issues](https://github.com/makimoto-ai/kawa/issues) for bugs and feature requests
 - 🔒 **Security:** see [SECURITY.md](SECURITY.md); please do not open public issues for vulnerabilities
 - 💬 **Discord:** _coming soon_
