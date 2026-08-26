@@ -59,7 +59,10 @@ Example `202` Response:
 | Audio content | Must be decodable with a readable duration | `400 Bad Request` |
 | Account quota | 1000 minutes of audio per month on the free allowance (failed jobs are not counted) | `429 Too Many Requests` |
 
-Both single-channel (mono) and dual-channel (stereo) audio are accepted; see [Diarization](#diarization) below for how channel count affects speaker separation.
+Both single-channel (mono) and dual-channel (stereo) audio are accepted; see [Diarization](#diarization) below for how channel count affects speaker separation. 
+
+!!! note 
+    A supposed single-speaker mono audio file can actually be a stereo audio file, with mono audio duplicated in both channels (conversion could happen when downloading the audio, for instance). Therefore, the output may appear duplicated for both speakers, when there is only one speaker in the audio.
 
 Recommended encoding: WAV, 16-bit PCM, at a sample rate between 8 kHz (telephone band) and 16 kHz, which is plenty for speech.
 
