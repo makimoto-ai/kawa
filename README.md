@@ -9,7 +9,7 @@
 
 **Kawa is live.** Makimoto Kawa is the first open-source conversational AI infrastructure built and hosted in Singapore, for teams working under APAC data-residency and regulatory requirements. The post-conversation transcription API and an interactive playground are available now.
 
-**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Quickstart](demo/QUICKSTART.md) · [API docs](docs/service/authentication.md) · [Roadmap](ROADMAP.md)
+**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Quickstart](demo/QUICKSTART.md) · [Python SDK](https://github.com/makimoto-ai/makimoto-python) · [API docs](docs/service/authentication.md) · [Roadmap](ROADMAP.md)
 
 ## 🚀 Get started
 
@@ -17,9 +17,32 @@
 2. **Generate an API token** from the dashboard.
 3. **Try it**, two ways:
    - 🖥️ **In your browser** with the [playground](demo): pick a sample, submit, read the transcript.
-   - 🐍 **In code** with the [`quickstart.py`](demo/quickstart.py) script or the [`KawaClient`](demo/kawa_client.py) reference client.
+   - 🐍 **In code** with the official [`makimoto-kawa`](https://github.com/makimoto-ai/makimoto-python) SDK (`pip install makimoto-kawa`), the [`quickstart.py`](demo/quickstart.py) script, or the bundled [`KawaClient`](demo/kawa_client.py) reference client.
 
 Need more minutes, or have a regulated-sector or APAC-language use case? Email [contact@makimoto.ai](mailto:contact@makimoto.ai) and we will help size a plan.
+
+## 🐍 Python SDK
+
+The official Python SDK, [`makimoto-kawa`](https://github.com/makimoto-ai/makimoto-python), wraps the API in a typed client with polling, error handling, and quota checks built in:
+
+```bash
+pip install makimoto-kawa
+```
+
+```python
+from makimoto import kawa
+
+client = kawa.KawaClient(token="<dashboard-token>")   # or set MAKIMOTO_API_TOKEN instead
+
+job = client.transcribe("call.mp3", language="en")
+
+if job.status == "succeeded":
+    print(job.result.full_text)
+else:
+    print(job.error)
+```
+
+See its [documentation](https://makimoto-ai.github.io/kawa/sdks/python/) for installation, usage, and the full API reference.
 
 ## 🎛️ Playground and reference client
 

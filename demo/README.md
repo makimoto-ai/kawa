@@ -67,7 +67,10 @@ this repository. You can also paste it into the **Connection** panel at runtime.
 ## Using `KawaClient`
 
 [`kawa_client.py`](kawa_client.py) is the file to copy into your project. It
-depends only on `requests`, is fully typed, and maps one method to each endpoint:
+depends only on `requests`, is fully typed, and maps one method to each endpoint.
+If you'd rather install a package than copy a file, see the official
+[`makimoto-kawa`](https://github.com/makimoto-ai/makimoto-python) SDK
+(`pip install makimoto-kawa`) instead.
 
 ```
 GET    /v1/transcriptions            -> list jobs
