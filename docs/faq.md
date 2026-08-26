@@ -37,13 +37,13 @@ The account's monthly transcription-minute quota has been exceeded. Check `GET /
 
 The uploaded file isn't MP3 or WAV. See [Supported Audio and Limits](service/api-reference.md#supported-audio-and-limits).
 
-## Transcripts and Diarization
+## Transcripts and Diarisation
 
-### How does speaker diarization work?
+### How does speaker diarisation work?
 
-Diarization is currently stereo-only: the pipeline splits the two audio channels (left/right) and diarizes by channel, rather than separating speakers within a single mixed signal. 
+Diarisation is currently stereo-only: the pipeline splits the two audio channels (left/right) and diarises by channel, rather than separating speakers within a single mixed signal.
 
-See [Diarization](service/api-reference.md#diarization) for detail, including how each channel maps to a speaker index.
+See [Diarisation](service/api-reference.md#diarisation) for detail, including how each channel maps to a speaker index.
 
 ### Can I delete a transcription?
 
@@ -57,6 +57,6 @@ All data is hosted in Singapore. See [Data Residency](concepts/index.md#data-res
 
 ### Does Kawa support real-time transcription?
 
-Not yet. The current API is post-conversation only (recorded calls, voicemail, archived interactions). 
+Not yet. The current API is post-conversation only (recorded calls, voicemail, archived interactions).
 
 A real-time API is planned; see [How It Works](concepts/index.md) and the [roadmap](https://github.com/makimoto-ai/kawa/blob/main/ROADMAP.md).
