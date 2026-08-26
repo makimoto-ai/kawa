@@ -2,7 +2,7 @@
 
 This page serves as a reference for all endpoints available for Kawa services.
 
-You may also refer to [`openapi.json`](../openapi.json) in the Kawa repository.
+You may also refer to [`openapi.json`](https://github.com/makimoto-ai/kawa/blob/main/docs/openapi.json) in the Kawa repository.
 
 ## `POST /v1/transcriptions`
 

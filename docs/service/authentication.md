@@ -18,7 +18,7 @@ export MAKIMOTO_API_URL="https://api.makimoto.ai"
 export MAKIMOTO_API_TOKEN="<token-from-dashboard>"
 ```
 
-Generate the token from the dashboard. Public API integrations should not call the underlying identity service directly; the dashboard handles sign-in and token generation for you.
+Generate the token from the dashboard. Currently, public API integrations should not call the underlying identity service directly; the dashboard handles sign-in and token generation for you.
 
 ## Token Lifetime and Refresh
 
@@ -32,10 +32,10 @@ During the beta, access is token-based: retrieve a token from the dashboard at [
 
 This suits development, testing, and the playground.
 
-For production use, contact us at contact@makimoto.ai for persistent credentials (such as an API key or other service authentication) and higher volume limits.
+For production use, contact us at [contact@makimoto.ai](mailto:contact@makimoto.ai) for persistent credentials (such as an API key or other service authentication) and higher volume limits.
 
 ## References
 
-- OpenAI API authentication: https://platform.openai.com/docs/api-reference/authentication
-- Anthropic API authentication: https://docs.anthropic.com/en/api/getting-started
-- Deepgram API authentication: https://developers.deepgram.com/docs/authenticating
+- [OpenAI API authentication](https://platform.openai.com/docs/api-reference/authentication)
+- [Anthropic API authentication](https://docs.anthropic.com/en/api/getting-started)
+- [Deepgram API authentication](https://developers.deepgram.com/docs/authenticating)

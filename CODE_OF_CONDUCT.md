@@ -34,7 +34,7 @@ This Code of Conduct applies within all community spaces, including this reposit
  
 ## Enforcement
  
-Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported to the community maintainers at conduct@makimoto.ai. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behaviour may be reported to the community maintainers at [contact@makimoto.ai](mailto:contact@makimoto.ai). All complaints will be reviewed and investigated promptly and fairly.
  
 All community maintainers are obligated to respect the privacy and security of the reporter of any incident.
  
