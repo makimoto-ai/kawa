@@ -30,4 +30,4 @@ In short:
 
 ## Need more?
 
-For higher volume, a regulated-sector use case, or an Asia-Pacific language not yet supported, reach out to the team via [contact@makimoto.ai](mailto:contact@makimoto.ai).
+For higher volume, or a regulated-sector or APAC-language use case, reach out to the team via [contact@makimoto.ai](mailto:contact@makimoto.ai) and we will help size a plan.

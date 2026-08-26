@@ -1,13 +1,12 @@
 # Kawa
 
-Kawa is Makimoto's open-source, Singapore-hosted transcription infrastructure for conversational AI in Asia-Pacific. This site documents the transcription API, the concepts behind the pipeline, and the client SDKs used to call it.
+Kawa is Makimoto's open-source, Singapore-hosted transcription infrastructure for conversational AI in Asia-Pacific. This site documents the transcription API and the concepts behind the pipeline.
 
 ## Where to go next
 
 - **[Getting started](getting-started.md)** — create an account, generate a token, and submit your first transcription.
 - **[Concepts](concepts/index.md)** — how the transcription pipeline is put together, and the terms used throughout this site.
 - **[Service](service/index.md)** — authentication, the HTTP API, limits, and the OpenAPI specification.
-- **SDKs** — client libraries for calling the API from your own code.
 
 ## Project links
 
