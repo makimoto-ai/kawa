@@ -31,6 +31,7 @@ theme:
   features:
     - navigation.sections
     - navigation.top
+    - navigation.footer
     - content.code.copy
     - search.suggest
 
@@ -41,5 +42,22 @@ markdown_extensions:
       permalink: true
   - pymdownx.superfences
   - pymdownx.inlinehilite
+
+copyright: Kawa is developed in the open by Makimoto, operated by Makimoto Technology Pte Ltd, a wholly-owned subsidiary of the Toku Group.
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/makimoto-ai/kawa
+      name: GitHub
+    - icon: fontawesome/solid/globe
+      link: https://makimoto.ai
+      name: makimoto.ai
+    - icon: fontawesome/solid/envelope
+      link: mailto:contact@makimoto.ai
+      name: Email
+    # - icon: fontawesome/brands/discord
+    #   link: <discord invite URL, once it exists>
+    #   name: Discord
 
 strict: true
