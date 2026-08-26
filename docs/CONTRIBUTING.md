@@ -22,6 +22,10 @@ Change it the same way you'd change any other file here: a pull request against 
 
     The Python SDK's docs come from [makimoto-ai/makimoto-python](https://github.com/makimoto-ai/makimoto-python), pinned to a release tag in `.github/workflows/documentation.yml`.
 
+    Currently, there is no automatic rebuild when the SDK repo changes: a new SDK release does not, by itself, update what's shown here. 
+    
+    To pick up SDK changes, a code owner must run the CI workflow manually via `workflow_dispatch` (which still rebuilds against whatever `ref:` is currently pinned, so the `ref:` bump has to happen first).
+
 ## Previewing locally
 
 ```bash
