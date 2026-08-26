@@ -18,7 +18,7 @@ export MAKIMOTO_API_URL="https://api.makimoto.ai"
 export MAKIMOTO_API_TOKEN="<token-from-dashboard>"
 ```
 
-Generate the token from the dashboard. Public API integrations should not call the underlying identity service directly; the dashboard handles sign-in and token generation for you.
+Generate the token from the dashboard. Currently, public API integrations should not call the underlying identity service directly; the dashboard handles sign-in and token generation for you.
 
 ## Token Lifetime and Refresh
 
