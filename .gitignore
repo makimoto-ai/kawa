@@ -16,6 +16,12 @@ env/
 .idea/
 .vscode/
 
+# Documentation build output: docs/sdks/ is populated at build time by
+# importing SDK docs from the SDK repository, and site/ is the built
+# MkDocs site. Neither is owned or committed here.
+docs/sdks/
+site/
+
 # Sample audio: publish only the curated, attributed files. Recordings added
 # through the playground's "Add from device" land in this folder and must not
 # be committed (they are unattributed and may exceed the upload limit).
