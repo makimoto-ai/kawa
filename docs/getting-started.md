@@ -1,18 +1,18 @@
 # Getting Started
 
-This page gets you from no account to a finished transcript.
+This page gets you from no account to a finished transcript. Use this as a quickstart to get familiar with the API and services. 
 
 ## 1. Create an account
 
-Create an account at [makimoto.ai](https://makimoto.ai). Every account includes a free monthly allowance of 1,000 minutes.
+To begin, create an account at [makimoto.ai](https://makimoto.ai). Every account includes a free monthly allowance of 1,000 minutes of audio.
 
 ## 2. Generate an API token
 
-Generate an API token from the developer/API section of the dashboard. See [Service → Authentication](service/authentication.md) for how tokens work and how long they last.
+Generate an API token from the developer/API section of the dashboard. See [Authentication](service/authentication.md) for how tokens work and how long they last.
 
 ## 3. Try it
 
-Two ways to make your first call:
+There are two ways to make your first call:
 
 - **In your browser**, with the [playground](https://github.com/makimoto-ai/kawa/tree/main/demo): pick a sample recording, submit it, and read the transcript, with the exact `curl` shown for every call.
 
@@ -20,13 +20,15 @@ Two ways to make your first call:
 
 ## 4. Submit, poll, and read a transcript
 
-The full request and response flow, including supported audio formats and size limits, is in [Service → Authentication and quickstart](service/authentication.md).
+The full request and response flow, including supported audio formats and size limits, is in [Authentication](service/authentication.md).
 
 In short:
 
 1. `POST /v1/transcriptions` with the audio file, to get a `job_id`.
 2. `GET /v1/transcriptions/{job_id}` every few seconds until `status` is `succeeded` or `failed`.
 3. Read the transcript from `result`, with speaker labels and segment-level timestamps.
+
+For more information on the available endpoints, see (placeholder).
 
 ## Need more?
 
