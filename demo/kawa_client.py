@@ -28,9 +28,10 @@ from __future__ import annotations
 import json
 import mimetypes
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any
 
 import requests
 
@@ -47,7 +48,7 @@ class KawaError(RuntimeError):
     header that reveals whether a 413 came from the API or a proxy in front of it).
     """
 
-    def __init__(self, status_code: int, body: Any, url: str, headers: Optional[Dict[str, str]] = None):
+    def __init__(self, status_code: int, body: Any, url: str, headers: dict[str, str] | None = None):
         self.status_code = status_code
         self.body = body
         self.url = url
@@ -73,7 +74,7 @@ class Segment:
     speaker_alias: str
 
     @classmethod
-    def from_dict(cls, raw: Dict[str, Any]) -> "Segment":
+    def from_dict(cls, raw: dict[str, Any]) -> Segment:
         speaker_id = raw.get("speaker_id")
         return cls(
             text=str(raw.get("text", "")),
@@ -88,13 +89,13 @@ class Segment:
 class TranscriptResult:
     """The ``result`` payload returned once a job succeeds."""
 
-    language: Optional[str]
-    duration_seconds: Optional[float]
-    words_count: Optional[int]
-    segments: List[Segment] = field(default_factory=list)
+    language: str | None
+    duration_seconds: float | None
+    words_count: int | None
+    segments: list[Segment] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, raw: Dict[str, Any]) -> "TranscriptResult":
+    def from_dict(cls, raw: dict[str, Any]) -> TranscriptResult:
         segments = [Segment.from_dict(s) for s in raw.get("transcript", []) if isinstance(s, dict)]
         return cls(
             language=raw.get("language"),
@@ -114,10 +115,10 @@ class Job:
 
     job_id: str
     status: str
-    raw: Dict[str, Any] = field(default_factory=dict)
+    raw: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, raw: Dict[str, Any]) -> "Job":
+    def from_dict(cls, raw: dict[str, Any]) -> Job:
         return cls(
             job_id=str(raw.get("job_id") or raw.get("id") or ""),
             status=str(raw.get("status") or "unknown"),
@@ -129,12 +130,12 @@ class Job:
         return self.status in TERMINAL_STATUSES
 
     @property
-    def result(self) -> Optional[TranscriptResult]:
+    def result(self) -> TranscriptResult | None:
         payload = self.raw.get("result")
         return TranscriptResult.from_dict(payload) if isinstance(payload, dict) else None
 
     @property
-    def error(self) -> Optional[Dict[str, Any]]:
+    def error(self) -> dict[str, Any] | None:
         err = self.raw.get("error")
         return err if isinstance(err, dict) else None
 
@@ -156,22 +157,22 @@ class KawaClient:
         api_url: str = DEFAULT_API_URL,
         *,
         timeout: float = 30.0,
-        session: Optional[requests.Session] = None,
+        session: requests.Session | None = None,
     ):
         self.token = (token or "").strip()
         self.api_url = (api_url or DEFAULT_API_URL).rstrip("/")
         self.timeout = timeout
         self._session = session or requests.Session()
         # Metadata of the most recent HTTP response, for debugging.
-        self.last_status: Optional[int] = None
-        self.last_headers: Dict[str, str] = {}
+        self.last_status: int | None = None
+        self.last_headers: dict[str, str] = {}
 
     # -- internals ---------------------------------------------------------- #
 
     def _url(self, path: str) -> str:
         return f"{self.api_url}{path}"
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         if not self.token:
             raise ValueError("A Makimoto API token is required.")
         return {"Authorization": f"Bearer {self.token}"}
@@ -194,7 +195,7 @@ class KawaClient:
 
     # -- endpoints ---------------------------------------------------------- #
 
-    def list_transcriptions(self) -> List[Job]:
+    def list_transcriptions(self) -> list[Job]:
         """GET /v1/transcriptions - all jobs for the authenticated account."""
         body = self._request("GET", "/v1/transcriptions")
         items = body.get("transcriptions") or body.get("jobs") or body.get("data") or []
@@ -206,12 +207,12 @@ class KawaClient:
         self,
         file_path: str | Path,
         *,
-        language: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        language: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Job:
         """POST /v1/transcriptions - submit a recording as multipart form-data."""
         path = Path(file_path)
-        data: Dict[str, str] = {}
+        data: dict[str, str] = {}
         if language:
             data["language"] = language.strip()
         if metadata:
@@ -231,7 +232,7 @@ class KawaClient:
         """GET /v1/transcriptions/{job_id} - status, and transcript once done."""
         return Job.from_dict(self._request("GET", f"/v1/transcriptions/{job_id}"))
 
-    def delete_transcription(self, job_id: str) -> Dict[str, Any]:
+    def delete_transcription(self, job_id: str) -> dict[str, Any]:
         """DELETE /v1/transcriptions/{job_id} - remove a job, where supported."""
         return self._request("DELETE", f"/v1/transcriptions/{job_id}")
 
