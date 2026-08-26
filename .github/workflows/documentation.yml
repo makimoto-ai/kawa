@@ -1,0 +1,87 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/documentation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - ".github/workflows/documentation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # SDK repo: check it out here,
+      # pinned to a release tag or `main`, then copy its docs/ into the gitignored
+      # docs/sdks/<name>/ tree before the build step below:
+      #
+      # - name: Check out Python SDK
+      #   uses: actions/checkout@v7
+      #   with:
+      #     repository: makimoto-ai/python-sdk
+      #     ref: v1.2.0
+      #     path: python-sdk
+      #
+      # - name: Import SDK documentation
+      #   run: |
+      #     mkdir -p docs/sdks/python
+      #     cp -R python-sdk/docs/. docs/sdks/python/
+      #
+      # If the API reference is generated from source via mkdocstrings
+      # instead of committed as Markdown, also install the SDK so it can
+      # be imported, and add mkdocstrings-python to requirements.txt:
+      #
+      # - name: Install SDK for API reference generation
+      #   run: pip install -e ./python-sdk
+      #
+      # Remember to add a nav entry for docs/sdks/python/ in mkdocs.yml.
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install documentation dependencies
+        run: pip install -r docs/requirements.txt
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Build documentation
+        run: mkdocs build --strict
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -199,7 +199,7 @@ expires — the Connection panel decodes and shows JWT expiry locally so you can
 spot a stale token. A `401` from the API means the token is missing, expired,
 or revoked.
 
-See [../docs/api-authentication-quickstart.md](../docs/api-authentication-quickstart.md)
+See [../docs/service/authentication.md](../docs/service/authentication.md)
 for the full HTTP contract.
 
 ## Sample audio

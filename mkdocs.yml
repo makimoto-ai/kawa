@@ -1,0 +1,45 @@
+site_name: Kawa Docs
+site_description: Documentation for Kawa, Makimoto's open-source transcription API.
+site_url: https://makimoto-ai.github.io/kawa/
+
+repo_name: makimoto-ai/kawa
+repo_url: https://github.com/makimoto-ai/kawa
+edit_uri: edit/main/docs/
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Concepts: concepts/index.md
+  - Service:
+      - Overview: service/index.md
+      - Authentication and quickstart: service/authentication.md
+  - Contributing: CONTRIBUTING.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+
+strict: true

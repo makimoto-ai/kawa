@@ -4,7 +4,7 @@
  
 If you discover a security vulnerability in Kawa, please report it responsibly. **Do not file a public GitHub issue.**
  
-Send your report to **security@makimoto.ai** with the following information:
+Send your report to [contact@makimoto.ai](mailto:contact@makimoto.ai) with the following information:
  
 - A description of the vulnerability
 - Steps to reproduce

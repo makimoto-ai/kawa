@@ -1,12 +1,10 @@
 # Makimoto API Authentication and Quickstart
 
-This guide documents the developer flow for the Makimoto transcription API
-during the beta.
+This guide documents the developer flow for the Makimoto transcription API.
 
 ## Authentication Model
 
-Developers authenticate API requests with a token generated from the Makimoto
-dashboard.
+Developers authenticate API requests with a token generated from the Makimoto dashboard.
 
 ```http
 Authorization: Bearer <makimoto_api_token>
@@ -19,30 +17,21 @@ export MAKIMOTO_API_URL="https://api.makimoto.ai"
 export MAKIMOTO_API_TOKEN="<token-from-dashboard>"
 ```
 
-Generate the token from the dashboard. Public API integrations should not call
-the underlying identity service directly; the dashboard handles sign-in and token
-generation for you.
+Generate the token from the dashboard. Public API integrations should not call the underlying identity service directly; the dashboard handles sign-in and token generation for you.
 
 ## Token Lifetime and Refresh
 
-The dashboard token is short-lived. While you are signed in, the dashboard keeps
-your token current, so for interactive and test usage you can copy the latest
-token whenever you need one.
+The dashboard token is short-lived. While you are signed in, the dashboard keeps your token current, so for interactive and test usage you can copy the latest token whenever you need one.
 
-A token you have copied elsewhere (an environment variable, a script, a Postman
-variable) is a snapshot: it does not renew itself and stops working once it
-expires. When that happens, copy a fresh token from the dashboard. Treat any
-`401` response from the API as "token missing, expired, or revoked" and
-regenerate.
+A token you have copied elsewhere (an environment variable, a script, a Postman variable) is a snapshot: it does not renew itself and stops working once it expires. When that happens, copy a fresh token from the dashboard. Treat any `401` response from the API as "token missing, expired, or revoked" and regenerate.
 
 ## Beta and Production Access
 
-During the beta, access is token-based: retrieve a token from the dashboard at
-[makimoto.ai](https://makimoto.ai) and send it as a bearer token, as shown above.
+During the beta, access is token-based: retrieve a token from the dashboard at [makimoto.ai](https://makimoto.ai) and send it as a bearer token, as shown above.
+
 This suits development, testing, and the playground.
 
-For production use, contact us at contact@makimoto.ai for persistent credentials
-(such as an API key or other service authentication) and higher volume limits.
+For production use, contact us at contact@makimoto.ai for persistent credentials (such as an API key or other service authentication) and higher volume limits.
 
 ## 1. Create an Account
 
@@ -52,8 +41,7 @@ Create an account in the Makimoto dashboard:
 https://www.makimoto.ai/
 ```
 
-After signing in, generate an API token from the developer/API section of the
-dashboard and set `MAKIMOTO_API_TOKEN`.
+After signing in, generate an API token from the developer/API section of the dashboard and set `MAKIMOTO_API_TOKEN`.
 
 ## 2. Authenticate and List Jobs
 
@@ -123,8 +111,7 @@ Request fields:
 | `language` | text | no | Sent as the API's multipart language field, for example `es`. |
 | `metadata` | JSON string | no | Must be a valid JSON object when present. |
 
-If a deployment rejects `language` as a top-level multipart field, leave it blank
-and include it in `metadata`, for example `{"language":"es"}`.
+If a deployment rejects `language` as a top-level multipart field, leave it blank and include it in `metadata`, for example `{"language":"es"}`.
 
 ## Supported Audio and Limits
 
@@ -135,13 +122,9 @@ and include it in `metadata`, for example `{"language":"es"}`.
 | Audio content | Must be decodable with a readable duration | `400 Bad Request` |
 | Account quota | 1000 minutes of audio per month on the free allowance (failed jobs are not counted) | `429 Too Many Requests` |
 
-Recommended encodings. Both single-channel (mono) and dual-channel (stereo) audio
-are accepted; for call recordings where each speaker is on a separate channel,
-stereo is useful. WAV should be 16-bit PCM. A sample rate of 8 kHz (telephone
-band) up to 16 kHz is plenty for speech.
+Recommended encodings. Both single-channel (mono) and dual-channel (stereo) audio are accepted; for call recordings where each speaker is on a separate channel, stereo is useful. WAV should be 16-bit PCM. A sample rate of 8 kHz (telephone band) up to 16 kHz is plenty for speech.
 
-The 10 MB cap is reached at very different durations depending on encoding, so
-choose the format to fit the clip:
+The 10 MB cap is reached at very different durations depending on encoding, so choose the format to fit the clip:
 
 | Encoding | Approx. minutes in 10 MB |
 | --- | --- |
@@ -150,9 +133,7 @@ choose the format to fit the clip:
 | MP3 128 kbps | ~11 |
 | MP3 32 kbps | ~44 |
 
-For anything longer than a short clip, prefer MP3, or downmix WAV to mono, to stay
-under the cap. The repository's `samples-audio/` directory contains ready-to-use
-test files in the supported formats.
+For anything longer than a short clip, prefer MP3, or downmix WAV to mono, to stay under the cap. The repository's `samples-audio/` directory contains ready-to-use test files in the supported formats.
 
 ## 4. Check Job Status
 
@@ -182,16 +163,13 @@ Recommended polling behavior:
 - Treat `404` as an unknown job id.
 
 ## 5. Get Transcript
-
-There is no separate transcript endpoint today. The transcript is returned from:
+The transcript is returned from:
 
 ```http
 GET /v1/transcriptions/{job_id}
 ```
 
-When the job succeeds, the response includes `result`. This is the transcript of
-the bundled `samples-audio/harvard.wav`, a single speaker reading Harvard
-sentences:
+When the job succeeds, the response includes `result`. This is the transcript of the bundled `samples-audio/harvard.wav`, a single speaker reading Harvard sentences:
 
 ```json
 {
@@ -213,10 +191,7 @@ sentences:
 }
 ```
 
-Because `harvard.wav` is a single speaker, every segment is `Speaker 0`. For
-multi-speaker audio each segment carries the detected `speaker_id` and
-`speaker_alias`, so a two-party call alternates between `Speaker 0`, `Speaker 1`,
-and so on.
+Because `harvard.wav` is a single speaker, every segment is `Speaker 0`. For multi-speaker audio each segment carries the detected `speaker_id` and `speaker_alias`, so a two-party call alternates between `Speaker 0`, `Speaker 1`, and so on.
 
 When the job fails, the response includes `error`:
 
