@@ -104,7 +104,7 @@ jobs:
               '',
               'then open <http://localhost:8000> in your browser.',
               '',
-              '---'
+              '---',
               '',
               'Alternatively, host the website locally through this branch:',
               '',
@@ -112,10 +112,13 @@ jobs:
               '',
               '2. Create a virtual environment at the repo root: `python -m venv .venv`',
               '',
-              '3. Activate the virtual environment, and pip install requirements:' + 
-              '`pip install -r docs/requirements.txt`',
+              '3. Activate the virtual environment, and install requirements: `pip install -r docs/requirements.txt`',
               '',
-              '4. Build and serve the documentation locally: `mkdocs build \ mkdocs serve'`',
+              '4. Build and serve the documentation locally:',
+              '',
+              '```',
+              'mkdocs build && mkdocs serve',
+              '```',
               '',
             ].join('\n');
 
