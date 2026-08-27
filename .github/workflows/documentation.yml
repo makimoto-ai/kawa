@@ -31,14 +31,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # No automatic rebuild on SDK changes: bump `ref:` to a new release
-      # tag and push (or run workflow_dispatch after bumping it) to pick up
-      # SDK doc changes. See docs/CONTRIBUTING.md for contributor-facing detail.
+      # Deliberately tracking `main`, not a release tag: as of writing, no
+      # tagged release of makimoto-python includes docs/ yet (v0.1.0 and
+      # v0.1.1 both predate it). This means these docs track the SDK's
+      # latest development, not necessarily what's shipped on PyPI. Once a
+      # release tag exists that includes docs/, consider pinning to that
+      # instead for stability. No automatic rebuild on SDK changes either
+      # way: run workflow_dispatch to pick up new commits/tags. See
+      # docs/CONTRIBUTING.md for contributor-facing detail.
       - name: Check out Python SDK
         uses: actions/checkout@v7
         with:
           repository: makimoto-ai/makimoto-python
-          ref: v0.1.1
+          ref: main
           path: python-sdk
 
       - name: Import SDK documentation
@@ -104,6 +109,20 @@ jobs:
               '```',
               '',
               'then open <http://localhost:8000> in your browser.',
+              '',
+              '---'
+              '',
+              'Alternatively, host the website locally through this branch:',
+              '',
+              '1. Clone this branch',
+              '',
+              '2. Create a virtual environment at the repo root: `python -m venv .venv`',
+              '',
+              '3. Activate the virtual environment, and pip install requirements:' + 
+              '`pip install -r docs/requirements.txt`',
+              '',
+              '4. Build and serve the documentation locally: `mkdocs build \ mkdocs serve'`',
+              '',
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
