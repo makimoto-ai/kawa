@@ -120,6 +120,8 @@ jobs:
               'mkdocs build && mkdocs serve',
               '```',
               '',
+              'Note that pages hosted in other repositories will not be present in this preview format.',
+              '',
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
