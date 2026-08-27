@@ -31,13 +31,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # Deliberately tracking `main`, not a release tag: as of writing, no
-      # tagged release of makimoto-python includes docs/ yet (v0.1.0 and
-      # v0.1.1 both predate it). This means these docs track the SDK's
-      # latest development, not necessarily what's shipped on PyPI. Once a
-      # release tag exists that includes docs/, consider pinning to that
-      # instead for stability. No automatic rebuild on SDK changes either
-      # way: run workflow_dispatch to pick up new commits/tags. See
+      # Deliberately tracking `main`, not a release tag. See
       # docs/CONTRIBUTING.md for contributor-facing detail.
       - name: Check out Python SDK
         uses: actions/checkout@v7
