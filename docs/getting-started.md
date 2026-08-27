@@ -1,5 +1,7 @@
 # Getting Started
 
+*Last updated: 2026-08-26*
+
 This page gets you from no account to a finished transcript. Use this as a quickstart to get familiar with the API and services. 
 
 ## 1. Create an account

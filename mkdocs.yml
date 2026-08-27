@@ -15,7 +15,14 @@ nav:
       - Authentication: service/authentication.md
       - Walkthrough: service/walkthrough.md
       - API Reference: service/api-reference.md
+  - SDKs:
+      - Python:
+          - Overview: sdks/python/index.md
+          - Installation: sdks/python/installation.md
+          - Usage: sdks/python/usage.md
+          - API Reference: sdks/python/api-reference.md
   - FAQ: faq.md
+  - Changelog: changelog.md
   - Contributing: CONTRIBUTING.md
 
 theme:
@@ -48,6 +55,15 @@ theme:
 
 plugins:
   - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            members_order: source
+
+exclude_docs: |
+  .venv/
 
 extra_css:
   - stylesheets/extra.css

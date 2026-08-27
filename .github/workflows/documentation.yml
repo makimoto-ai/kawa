@@ -31,30 +31,19 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      # SDK repo: check it out here,
-      # pinned to a release tag or `main`, then copy its docs/ into the gitignored
-      # docs/sdks/<name>/ tree before the build step below:
-      #
-      # - name: Check out Python SDK
-      #   uses: actions/checkout@v7
-      #   with:
-      #     repository: makimoto-ai/python-sdk
-      #     ref: v1.2.0
-      #     path: python-sdk
-      #
-      # - name: Import SDK documentation
-      #   run: |
-      #     mkdir -p docs/sdks/python
-      #     cp -R python-sdk/docs/. docs/sdks/python/
-      #
-      # If the API reference is generated from source via mkdocstrings
-      # instead of committed as Markdown, also install the SDK so it can
-      # be imported, and add mkdocstrings-python to requirements.txt:
-      #
-      # - name: Install SDK for API reference generation
-      #   run: pip install -e ./python-sdk
-      #
-      # Remember to add a nav entry for docs/sdks/python/ in mkdocs.yml.
+      # Deliberately tracking `main`, not a release tag. See
+      # docs/CONTRIBUTING.md for contributor-facing detail.
+      - name: Check out Python SDK
+        uses: actions/checkout@v7
+        with:
+          repository: makimoto-ai/makimoto-python
+          ref: main
+          path: python-sdk
+
+      - name: Import SDK documentation
+        run: |
+          mkdir -p docs/sdks/python
+          cp -R python-sdk/docs/. docs/sdks/python/
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -63,6 +52,9 @@ jobs:
 
       - name: Install documentation dependencies
         run: pip install -r docs/requirements.txt
+
+      - name: Install SDK for API reference generation
+        run: pip install -e ./python-sdk
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
@@ -111,6 +103,25 @@ jobs:
               '```',
               '',
               'then open <http://localhost:8000> in your browser.',
+              '',
+              '---',
+              '',
+              'Alternatively, host the website locally through this branch:',
+              '',
+              '1. Clone this branch',
+              '',
+              '2. Create a virtual environment at the repo root: `python -m venv .venv`',
+              '',
+              '3. Activate the virtual environment, and install requirements: `pip install -r docs/requirements.txt`',
+              '',
+              '4. Build and serve the documentation locally:',
+              '',
+              '```',
+              'mkdocs build && mkdocs serve',
+              '```',
+              '',
+              'Note that pages hosted in other repositories will not be present in this preview format.',
+              '',
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
