@@ -110,7 +110,7 @@ jobs:
               'python -m http.server 8000',
               '```',
               '',
-              'then open <http://localhost:8000/kawa/> in your browser.',
+              'then open <http://localhost:8000> in your browser.',
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
