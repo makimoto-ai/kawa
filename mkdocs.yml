@@ -9,30 +9,48 @@ edit_uri: edit/main/docs/
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Concepts: concepts/index.md
+  - How It Works: concepts/index.md
   - Service:
       - Overview: service/index.md
-      - Authentication and quickstart: service/authentication.md
+      - Authentication: service/authentication.md
+      - Walkthrough: service/walkthrough.md
+      - API Reference: service/api-reference.md
+  - FAQ: faq.md
   - Contributing: CONTRIBUTING.md
 
 theme:
   name: material
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  font:
+    text: Inter
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   features:
     - navigation.sections
     - navigation.top
+    - navigation.footer
     - content.code.copy
     - search.suggest
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
@@ -41,5 +59,22 @@ markdown_extensions:
       permalink: true
   - pymdownx.superfences
   - pymdownx.inlinehilite
+
+copyright: Kawa is developed in the open by Makimoto, operated by Makimoto Technology Pte Ltd, a wholly-owned subsidiary of the Toku Group.
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/makimoto-ai/kawa
+      name: GitHub
+    - icon: fontawesome/solid/globe
+      link: https://makimoto.ai
+      name: makimoto.ai
+    - icon: fontawesome/solid/envelope
+      link: mailto:contact@makimoto.ai
+      name: Email
+    # - icon: fontawesome/brands/discord
+    #   link: <discord invite URL, once it exists>
+    #   name: Discord
 
 strict: true

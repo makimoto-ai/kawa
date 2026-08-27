@@ -18,6 +18,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: write   # only used by the PR preview-artifact comment step
 
 concurrency:
   group: "pages"
@@ -68,6 +69,72 @@ jobs:
 
       - name: Build documentation
         run: mkdocs build --strict
+
+      # Downloadable preview of this PR's built site, so reviewers can look
+      # at the actual rendered pages before merging. Separate from the
+      # upload-pages-artifact step below: that one is a special format
+      # consumed only by deploy-pages for the real deployment, not
+      # something a person can usefully open. This is a plain zip.
+      - name: Upload docs preview artifact
+        if: github.event_name == 'pull_request'
+        id: upload-preview
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-preview-pr-${{ github.event.pull_request.number }}
+          path: site
+          retention-days: 14
+
+      # continue-on-error: PRs from forks get a read-only GITHUB_TOKEN
+      # regardless of the permissions block above, so this call fails there.
+      # The artifact itself still uploads fine either way; only the
+      # convenience comment is lost for external contributors.
+      - name: Comment preview link on PR
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const marker = '<!-- docs-preview-comment -->';
+            const url = '${{ steps.upload-preview.outputs.artifact-url }}';
+            const body = [
+              marker,
+              '### Docs preview built',
+              '',
+              `[Download the preview](${url}) (zip, expires in 14 days).`,
+              '',
+              'MkDocs uses directory-style URLs, so opening `index.html` directly ' +
+              "won't navigate between pages correctly. After unzipping, run a local " +
+              'static server from inside the folder, e.g.:',
+              '',
+              '```',
+              'python -m http.server 8000',
+              '```',
+              '',
+              'then open <http://localhost:8000> in your browser.',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
