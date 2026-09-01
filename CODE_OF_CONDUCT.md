@@ -30,7 +30,7 @@ Community maintainers are responsible for clarifying and enforcing our standards
  
 ## Scope
  
-This Code of Conduct applies within all community spaces, including this repository, our Discord, and any official communication channels. It also applies when an individual is officially representing the community in public spaces.
+This Code of Conduct applies within all community spaces, including this repository, our [Discord](https://discord.gg/ePBgMWjXk), and any official communication channels. It also applies when an individual is officially representing the community in public spaces.
  
 ## Enforcement
  
