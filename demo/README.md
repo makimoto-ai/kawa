@@ -75,8 +75,10 @@ If you'd rather install a package than copy a file, see the official
 ```
 GET    /v1/transcriptions            -> list jobs
 POST   /v1/transcriptions            -> submit audio (multipart), returns job_id
-GET    /v1/transcriptions/{job_id}   -> job status + transcript when succeeded
+GET    /v1/transcriptions/{job_id}   -> job status + result when succeeded
 DELETE /v1/transcriptions/{job_id}   -> remove a job (where supported)
+POST   /v1/summarize                 -> summarise a finished transcription
+POST   /v1/tag                       -> tag a finished transcription
 ```
 
 Construct it with a token and (optionally) a base URL:
@@ -168,6 +170,43 @@ class TranscriptResult:
 
 `job.is_terminal` is true once the status is `succeeded` or `failed`, and
 `job.error` holds the error payload on failure.
+
+### Summarise or tag a transcription
+
+Both endpoints take a transcription of your own that has already succeeded,
+not audio, and both are asynchronous. The POST returns a **new** job, and that
+is the one to poll; the source transcription's id will not do:
+
+```python
+summary_job = client.create_summary(job.job_id)     # POST /v1/summarize
+*_, done = client.poll(summary_job.job_id)
+print(done.summary.topic, done.summary.summary)
+
+tags_job = client.create_tags(job.job_id)           # POST /v1/tag
+*_, done = client.poll(tags_job.job_id)
+for category, values in done.tags.tags.items():
+    print(category, values)                         # call_reason ['billing_issue']
+```
+
+`job.type` says which of the three shapes the result carries, and the three
+accessors are keyed off it: `job.result` is a `TranscriptResult` only on a
+`transcription` job, `job.summary` a `SummaryResult` only on a `summary` job,
+`job.tags` a `TagsResult` only on a `tags` job. The others return `None`, so a
+summary can never be mistaken for a transcript.
+
+Three refusals are worth branching on, all raised as `KawaError`:
+
+| Status | Code | What to do |
+|---|---|---|
+| 409 | `TRANSCRIPTION_NOT_READY` | The transcription is still running. Retry later. |
+| 400 | `NOT_A_TRANSCRIPTION` | The id is itself a summary or tags job. |
+| 422 | `TRANSCRIPT_EMPTY` | It succeeded, but there was no speech to work with. |
+
+`job.source_job_id` is the transcription a summary or tags job was derived
+from, as reported by the API. It is `None` on a transcription, and on a
+postprocessing job created before the API began recording it. Note too that
+`list_transcriptions()` returns all three types and reports neither `type` nor
+`source_job_id`; postprocessing jobs list without a filename.
 
 ### Handling errors
 

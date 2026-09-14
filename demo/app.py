@@ -22,8 +22,10 @@ The API contract used here:
 
     GET    /v1/transcriptions            -> list jobs
     POST   /v1/transcriptions            -> submit audio (multipart), returns job_id
-    GET    /v1/transcriptions/{job_id}   -> job status + transcript when succeeded
+    GET    /v1/transcriptions/{job_id}   -> job status + result when succeeded
     DELETE /v1/transcriptions/{job_id}   -> remove a job (where supported)
+    POST   /v1/summarize                 -> summarise a finished transcription
+    POST   /v1/tag                       -> tag a finished transcription
 
 Authenticate every request with a dashboard token:
 
@@ -50,9 +52,12 @@ import requests
 # copied into a project without any of the Gradio playground below.
 from kawa_client import (
     DEFAULT_API_URL,
+    POSTPROCESSING_PATHS,
     Job,
     KawaClient,
     KawaError,
+    SummaryResult,
+    TagsResult,
     TranscriptResult,
 )
 
@@ -123,6 +128,19 @@ def curl_delete(api_url: str, job_id: str) -> str:
         "curl -sS -X DELETE \\\n"
         f"  {_shell_quote(api_url.rstrip('/') + '/v1/transcriptions/' + (job_id or '<job_id>'))} \\\n"
         '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN"'
+    )
+
+
+def curl_postprocess(api_url: str, dimension: str, source_job_id: str) -> str:
+    """POST /v1/summarize or /v1/tag for one source transcription."""
+    path = POSTPROCESSING_PATHS[dimension]
+    body = json.dumps({"transcription_job_id": source_job_id or "<transcription_job_id>"}, separators=(",", ":"))
+    return (
+        "curl -sS -X POST \\\n"
+        f"  {_shell_quote(api_url.rstrip('/') + path)} \\\n"
+        '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN" \\\n'
+        "  -H 'Content-Type: application/json' \\\n"
+        f"  -d {_shell_quote(body)}"
     )
 
 
@@ -595,6 +613,47 @@ def transcript_to_messages(result: TranscriptResult) -> list[dict[str, str]]:
     return messages
 
 
+def summary_html(result: SummaryResult) -> str:
+    """A summary as a topic pill above the prose."""
+    topic = f'<span class="mk-topic">{_esc(result.topic)}</span>' if result.topic else ""
+    body = _esc(result.summary) or "The model returned an empty summary."
+    return f'<div class="mk-card">{topic}<p>{body}</p></div>'
+
+
+def tags_html(result: TagsResult) -> str:
+    """A tag set as one chip row per category.
+
+    Category keys arrive lower_snake_case (``call_reason``,
+    ``customer_sentiment``), as do the values; both are humanised for display
+    while the raw form stays visible in the response panel.
+    """
+    if not result.tags:
+        return '<div class="mk-card"><p>The model selected no tags.</p></div>'
+    blocks = []
+    for category, values in result.tags.items():
+        chips = "".join(f'<span class="mk-chip">{_esc(v.replace("_", " "))}</span>' for v in values)
+        blocks.append(
+            f'<div class="mk-cat"><small>{_esc(category.replace("_", " "))}</small>'
+            f'<div class="mk-chips">{chips}</div></div>'
+        )
+    return f'<div class="mk-card">{"".join(blocks)}</div>'
+
+
+# The three job types, as the API names them in a job's ``type`` field.
+# "unknown" is the playground's own fourth case: a listed job whose type could
+# not be resolved, which opening it will settle.
+JOB_TYPE_LABELS = {"transcription": "Transcription", "summary": "Summary", "tags": "Tags", "unknown": "Job"}
+
+
+def postprocessing_html(job: Job) -> str:
+    """Render whichever of the two result shapes the job carries."""
+    if job.type == "summary" and job.summary:
+        return summary_html(job.summary)
+    if job.type == "tags" and job.tags:
+        return tags_html(job.tags)
+    return ""
+
+
 def metrics_html(job: Job) -> str:
     result = job.result
     if not result:
@@ -706,8 +765,35 @@ def transcribe(
     yield status_pill("Still processing after the polling window. Open it under Transcriptions to keep checking.", "pending"), empty, "", "", job_id, collapsed
 
 
-def list_transcriptions_view(token: str, api_url: str) -> tuple[list[list[str]], dict[str, Any], str, str]:
-    """List jobs for the Transcriptions tab.
+def _job_filename(job: Job) -> str | None:
+    name = job.raw.get("original_filename") or job.raw.get("filename")
+    return str(name) if name else None
+
+
+def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, str]:
+    """Fetch one job purely to learn its ``type``.
+
+    Given its own client, and therefore its own ``requests.Session``, because
+    these run on a thread pool and a Session is not safe to share. A failure
+    reports ``unknown`` rather than guessing: the row still lists, and opening
+    it resolves the type properly.
+    """
+    try:
+        return job_id, KawaClient(token=token, api_url=api_url).get_transcription(job_id).type
+    except (KawaError, requests.RequestException, ValueError):
+        return job_id, "unknown"
+
+
+def list_jobs_view(
+    token: str, api_url: str, known_types: dict[str, str]
+) -> tuple[list[dict[str, str]], dict[str, str], str, str]:
+    """GET /v1/transcriptions, labelled by job type, newest first.
+
+    The list endpoint reports no ``type``, so each row has to be labelled here.
+    Only a transcription has an upload behind it, so a row *with* a filename is
+    certainly one; a row without needs a single GET to tell a summary from a
+    tags job, and those run concurrently. Types never change, so the answers
+    are cached for the session and a later refresh only resolves new rows.
 
     Returns: (table_rows, cache, list_status, list_curl)
     """
@@ -757,22 +843,173 @@ def open_transcript(
 
     raw = response_dump(client.last_status, client.last_headers, job.raw)
     if job.status == "succeeded" and job.result:
-        return transcript_to_messages(job.result), metrics_html(job), status_pill("Transcript ready", "good"), raw, *curls, collapsed
-    if job.status == "failed":
-        err = job.error or {}
-        detail = err.get("message") or err.get("code") or "The job failed."
-        return [], "", status_pill(f"Failed: {detail}", "bad"), raw, *curls, expanded
-    return [], "", status_pill(f"{job.status.capitalize()}… fetch again shortly.", "pending"), raw, *curls, collapsed
+        return transcript_to_messages(job.result) if job.result else [],
+            transcript_visible=gr.update(visible=True),
+            # Nothing can be derived from a job that has not succeeded, so the
+            # buttons stay hidden rather than offering a guaranteed 409.
+            actions_visible=gr.update(visible=job.status == "succeeded"),
+            summary=fetch_derived(client, "summary", derived.get("summary")),
+            tags=fetch_derived(client, "tags", derived.get("tags")),
+            **common,
+        )
+
+    # The API reports the source itself now. The browser's own record is the
+    # fallback, for a job created before that landed, or against a deployment
+    # that predates the field.
+    source_id = job.source_job_id or (pairs or {}).get("by_result", {}).get(job_id)
+    return _detail(
+        source=gr.update(value=source_id or "", visible=bool(source_id)),
+        source_note=gr.update(visible=not source_id),
+        result=postprocessing_html(job),
+        result_visible=gr.update(visible=True),
+        **common,
+    )
 
 
-def select_row(cache: dict[str, Any], evt: gr.SelectData) -> str:
-    """Return the job id of the clicked table row (last column)."""
+# --------------------------------------------------------------------------- #
+# Postprocessing  (summarise / tag the open transcription)
+# --------------------------------------------------------------------------- #
+
+
+def record_pair(pairs: dict[str, Any], source_id: str, dimension: str, result_id: str) -> dict[str, Any]:
+    """Remember which transcription a summary or tags job came from.
+
+    The API does not: a postprocessing job row carries no reference to its
+    source, and neither does the 202 that creates it. Without this the lineage
+    is simply lost, so the playground keeps its own record in browser storage,
+    which is why it survives a reload but not a different browser, and knows
+    nothing about jobs created elsewhere.
+    """
+    pairs = dict(pairs or {})
+    by_source = {k: dict(v) for k, v in (pairs.get("by_source") or {}).items()}
+    by_result = dict(pairs.get("by_result") or {})
+    by_source.setdefault(source_id, {})[dimension] = result_id
+    by_result[result_id] = source_id
+    return {"by_source": by_source, "by_result": by_result}
+
+
+def run_postprocess(
+    dimension: str,
+    source_job_id: str,
+    token: str,
+    api_url: str,
+    pairs: dict[str, Any],
+    rows: list[dict[str, str]],
+) -> Iterator[tuple[Any, ...]]:
+    """POST /v1/summarize or /v1/tag for the open transcription, then poll.
+
+    The POST answers 202 with a *new* job id, and that is what gets polled. The
+    new job is written into the rail straight away so it is visible as it runs,
+    and the pairing is recorded at creation rather than on success, so lineage
+    survives a job that fails or outlives the polling window.
+
+    Yields: (pp_status, summary, tags, raw, raw_open, pairs, rows)
+    ``summary`` and ``tags`` share one handler; the dimension not being run is
+    left untouched with gr.skip().
+    """
+    noun = JOB_TYPE_LABELS[dimension]
+    skip = gr.skip()
+    collapsed, expanded = gr.update(open=False), gr.update(open=True)
+
+    def emit(
+        pp_status: str,
+        block: Any = skip,
+        raw: Any = skip,
+        raw_open: Any = skip,
+        pairs_out: Any = skip,
+        rows_out: Any = skip,
+    ) -> tuple[Any, ...]:
+        return (
+            pp_status,
+            block if dimension == "summary" else skip,
+            block if dimension == "tags" else skip,
+            raw,
+            raw_open,
+            pairs_out,
+            rows_out,
+        )
+
+    source_job_id = (source_job_id or "").strip()
+    if not (token or "").strip():
+        yield emit(status_pill("Add your API token under Connection to sign in.", "bad"))
+        return
+    if not source_job_id:
+        yield emit(status_pill("Open a transcription first.", "bad"))
+        return
+
+    client = _client(token, api_url)
+    yield emit(status_pill(f"Submitting for {noun.lower()}…", "pending"))
     try:
-        rows = list(cache.keys())
-        idx = evt.index[0] if isinstance(evt.index, (list, tuple)) else evt.index
-        return rows[int(idx)]
-    except Exception:
-        return ""
+        job = client.create_postprocessing(dimension, source_job_id)
+    except (KawaError, ValueError, requests.RequestException) as exc:
+        # The codes are distinct on purpose: 409 means "still running, retry
+        # later", 400 NOT_A_TRANSCRIPTION means the wrong kind of job.
+        yield emit(status_pill(f"{noun} request refused: {exc}", "bad"), "", error_dump(exc), expanded)
+        return
+
+    job_id = job.job_id
+    pairs = record_pair(pairs, source_job_id, dimension, job_id)
+    row = {
+        "job_id": job_id,
+        "type": dimension,
+        "status": job.status or "processing",
+        "name": "",
+        "created": str(job.raw.get("received_at") or job.raw.get("created_at") or ""),
+    }
+    yield emit(
+        status_pill(f"Accepted · {job_id}", "pending"),
+        derived_block(noun, job_id, status_pill("Queued with the provider…", "pending")),
+        response_dump(client.last_status, client.last_headers, job.raw),
+        collapsed,
+        pairs,
+        _upsert_row(rows, row),
+    )
+
+    try:
+        for polled in client.poll(job_id):
+            raw = response_dump(client.last_status, client.last_headers, polled.raw)
+            if polled.is_terminal:
+                finished = {**row, "status": polled.status}
+                if polled.status == "succeeded":
+                    yield emit(
+                        status_pill(f"{noun} ready", "good"),
+                        derived_block(noun, job_id, postprocessing_html(polled)),
+                        raw, collapsed, skip, _upsert_row(rows, finished),
+                    )
+                    return
+                err = polled.error or {}
+                detail = err.get("message") or err.get("code") or "The job failed."
+                yield emit(
+                    status_pill(f"Failed: {detail}", "bad"),
+                    derived_block(noun, job_id, f'<div class="mk-empty">Failed: {_esc(detail)}</div>'),
+                    raw, expanded, skip, _upsert_row(rows, finished),
+                )
+                return
+            yield emit(
+                status_pill(f"{polled.status.capitalize()}…", "pending"),
+                derived_block(noun, job_id, status_pill(f"{polled.status.capitalize()}…", "pending")),
+                raw, collapsed,
+            )
+    except (KawaError, requests.RequestException) as exc:
+        yield emit(status_pill(f"Polling failed: {exc}", "bad"), skip, error_dump(exc), expanded)
+        return
+
+    yield emit(
+        status_pill(f"Still processing after the polling window. Open {job_id} from the list later.", "pending"),
+        derived_block(noun, job_id, status_pill("Still processing.", "pending")),
+    )
+
+
+def summarize(
+    source_job_id: str, token: str, api_url: str, pairs: dict[str, Any], rows: list[dict[str, str]]
+) -> Iterator[tuple[Any, ...]]:
+    yield from run_postprocess("summary", source_job_id, token, api_url, pairs, rows)
+
+
+def tag(
+    source_job_id: str, token: str, api_url: str, pairs: dict[str, Any], rows: list[dict[str, str]]
+) -> Iterator[tuple[Any, ...]]:
+    yield from run_postprocess("tags", source_job_id, token, api_url, pairs, rows)
 
 
 def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
