@@ -2,10 +2,20 @@
 
 > Open-source, Singapore-hosted transcription for conversational AI in Asia-Pacific.
 
+<!-- Previous Version for Reference
 [![Licence: MIT](https://img.shields.io/badge/Licence-MIT-blue.svg)](LICENSE)
 [![Status: Live](https://img.shields.io/badge/Status-Live-brightgreen.svg)](https://makimoto.ai)
 [![API docs](https://img.shields.io/badge/API-docs-6200EB.svg)](https://makimoto-ai.github.io/kawa/)
 [![Made in Singapore](https://img.shields.io/badge/Made%20in-Singapore-red.svg)](#-data-residency-and-sovereignty)
+-->
+<p align="center">
+   <a href="https://github.com/makimoto-ai/kawa"><img src="https://img.shields.io/badge/Status-Live-brightgreen.svg" alt="Status: LIVE"/></a>
+   <a href="docs/service/authentication.md"><img src="https://img.shields.io/badge/API-docs-6200EB.svg" alt="API Docs" /></a>
+   <a href="https://www.makimoto.ai/"><img src="https://img.shields.io/badge/Website-Makimoto-blue?logo=googlechrome&logoColor=white" alt="Website" /></a>
+   <a href="https://discord.gg/EwVQxPCb5"><img src="https://img.shields.io/discord/1352140878650540062?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord" /></a>
+   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-orange.svg" alt="MIT license" /></a>
+   <a href="#-data-residency-and-sovereignty"><img src="https://img.shields.io/badge/Made%20in-Singapore-red.svg" alt="Made in Singapore" /></a>
+</p>
 
 **Kawa is live.** Makimoto Kawa is the first open-source conversational AI infrastructure built and hosted in Singapore, for teams working under APAC data-residency and regulatory requirements. The post-conversation transcription API and an interactive playground are available now.
 
@@ -103,7 +113,7 @@ Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Al
 - 📧 **Email:** [contact@makimoto.ai](mailto:contact@makimoto.ai)
 - 🐛 **Issues:** [GitHub Issues](https://github.com/makimoto-ai/kawa/issues) for bugs and feature requests
 - 🔒 **Security:** see [SECURITY.md](SECURITY.md); please do not open public issues for vulnerabilities
-- 💬 **Discord:** [Join our server](https://discord.gg/ePBgMWjXk)
+- 💬 **Discord:** https://discord.gg/EwVQxPCb5
 
 ## 📄 Licence
 
