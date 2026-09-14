@@ -41,6 +41,7 @@ import os
 import shutil
 import wave
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -252,6 +253,10 @@ VIOLET = "#6200EB"   # primary accent (buttons, links)
 VIOLET_HOVER = "#7A2BFF"
 CYAN = "#00F6FF"     # secondary accent (gradients, glow)
 
+# One colour per job type, for the rail badges, the legend and the detail
+# heading.
+TYPE_COLOURS = {"transcription": VIOLET, "summary": CYAN, "tags": "#183D82"}
+
 # Status colours, with a variant per mode for legible contrast.
 GOOD_D, BAD_D, PENDING_D = "#36D9A0", "#FF6B6B", "#FFC24B"
 GOOD_L, BAD_L, PENDING_L = "#0F8A5A", "#C0392B", "#B7791F"
@@ -435,6 +440,114 @@ CSS = f"""
 .mk-metrics div {{ display: flex; flex-direction: column; gap: 1px; }}
 .mk-metrics small {{ color: var(--mk-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }}
 .mk-metrics strong {{ font-size: 15px; font-weight: 600; color: var(--mk-ink); }}
+
+/* Job rail ------------------------------------------------------------- */
+/* A scrollable column of one button per job, newest first. Each row carries
+   its type three ways: the badge drawn by the ::after rules below, the colour
+   of that badge, and the colour of the left edge. The row is a plain block
+   rather than a flex layout, so the badge runs on inline after the label
+   instead of sitting in a column of its own, and the label wraps rather than
+   truncating: a long filename or a full job id stays readable in a narrow
+   rail. */
+.mk-joblist {{
+  max-height: 560px; overflow-y: auto; gap: 6px !important;
+  border: 1px solid var(--mk-line); border-radius: 12px;
+  background: var(--mk-well); padding: 8px !important; margin-bottom: 8px;
+}}
+.mk-joblist button.mk-jobrow {{
+  display: block !important; width: 100%; text-align: left;
+  white-space: normal !important; overflow-wrap: anywhere; line-height: 1.75;
+  font-size: 12.5px !important; font-weight: 500;
+  padding: 8px 11px !important; border-radius: 8px !important;
+  background: var(--mk-panel) !important; color: var(--mk-ink) !important;
+  border: 1px solid var(--mk-line) !important; border-left-width: 3px !important;
+}}
+/* The type badge, inline at the end of the label. A Gradio button's label is
+   plain text, so the words TRANSCRIPTION / SUMMARY / TAGS come from the row's
+   own class rather than being repeated into every label. */
+.mk-joblist button.mk-jobrow::after {{
+  display: inline-block; vertical-align: middle; white-space: nowrap;
+  margin-left: 8px; position: relative; top: -1px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em;
+  padding: 2px 6px; border-radius: 4px; color: #FFFFFF;
+}}
+.mk-joblist button.mk-jobrow:hover {{ border-color: var(--mk-violet) !important; }}
+/* Scoped as tightly as the rule above, or the border shorthand there would
+   win on specificity and every row would share one edge colour. */
+.mk-joblist button.mk-jobrow-transcription {{ border-left-color: {TYPE_COLOURS["transcription"]} !important; }}
+.mk-joblist button.mk-jobrow-transcription::after {{
+  content: "TRANSCRIPTION"; background: {TYPE_COLOURS["transcription"]};
+}}
+.mk-joblist button.mk-jobrow-summary {{ border-left-color: {TYPE_COLOURS["summary"]} !important; }}
+.mk-joblist button.mk-jobrow-summary::after {{
+  content: "SUMMARY"; background: {TYPE_COLOURS["summary"]}; color: #010E39;
+}}
+.mk-joblist button.mk-jobrow-tags {{ border-left-color: {TYPE_COLOURS["tags"]} !important; }}
+.mk-joblist button.mk-jobrow-tags::after {{ content: "TAGS"; background: {TYPE_COLOURS["tags"]}; }}
+.mk-joblist button.mk-jobrow-unknown {{ border-left-color: var(--mk-muted) !important; }}
+.mk-joblist button.mk-jobrow-unknown::after {{ content: "JOB"; background: var(--mk-muted); }}
+
+/* A failed job is marked at the start of its row, so the rail can be scanned
+   for trouble without opening anything. ::after is already the type badge,
+   which is why this one leads rather than follows. */
+.mk-joblist button.mk-jobrow-failed::before {{
+  content: "!"; display: inline-block; vertical-align: middle;
+  margin-right: 7px; position: relative; top: -1px;
+  width: 16px; height: 16px; border-radius: 999px;
+  background: var(--mk-bad); color: #FFFFFF;
+  font-size: 11px; font-weight: 700; line-height: 16px; text-align: center;
+}}
+
+/* Legend: the same three badges, so the rail needs no explaining. */
+.mk-legend {{ display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }}
+.mk-legend small {{
+  color: var(--mk-muted); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.06em; margin-right: 2px;
+}}
+
+/* Type tag + detail heading -------------------------------------------- */
+.mk-jobhead {{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 8px; }}
+.mk-jobhead code {{ font-size: 12.5px; color: var(--mk-muted); background: transparent; }}
+.mk-tag {{
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 5px; color: #FFFFFF;
+}}
+.mk-tag-transcription {{ background: {TYPE_COLOURS["transcription"]}; }}
+.mk-tag-summary {{ background: {TYPE_COLOURS["summary"]}; color: #010E39; }}
+.mk-tag-tags {{ background: {TYPE_COLOURS["tags"]}; }}
+.mk-tag-unknown {{ background: var(--mk-muted); }}
+
+/* Derived result blocks ------------------------------------------------- */
+.mk-derived {{ margin-top: 10px; }}
+.mk-derived > small {{
+  display: block; color: var(--mk-muted); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px;
+}}
+
+/* Summary + tags ------------------------------------------------------- */
+.mk-card {{
+  border: 1px solid var(--mk-line); border-radius: 12px; background: var(--mk-well);
+  padding: 14px 16px; margin: 4px 0 2px;
+}}
+.mk-card .mk-topic {{
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--mk-code-ink);
+  border: 1px solid var(--mk-line); border-radius: 999px; padding: 3px 10px; margin-bottom: 10px;
+}}
+.mk-card p {{ margin: 0; font-size: 14.5px; line-height: 1.6; color: var(--mk-ink); }}
+
+.mk-cat {{ margin-top: 12px; }}
+.mk-cat:first-child {{ margin-top: 0; }}
+.mk-cat small {{
+  display: block; color: var(--mk-muted); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
+}}
+.mk-chips {{ display: flex; flex-wrap: wrap; gap: 6px; }}
+.mk-chip {{
+  font-size: 12.5px; font-weight: 500; color: var(--mk-ink);
+  background: var(--mk-panel); border: 1px solid var(--mk-line);
+  border-radius: 999px; padding: 3px 11px;
+}}
 
 .mk-fail {{
   border: 1px solid var(--mk-line); border-left: 3px solid var(--mk-bad); border-radius: 10px;
@@ -795,55 +908,212 @@ def list_jobs_view(
     tags job, and those run concurrently. Types never change, so the answers
     are cached for the session and a later refresh only resolves new rows.
 
-    Returns: (table_rows, cache, list_status, list_curl)
+    Returns: (rows, type_cache, list_status, list_curl)
     """
+    types = dict(known_types or {})
     if not (token or "").strip():
-        return [], {}, status_pill("Add a token under Connection to begin.", "bad"), curl_list(api_url)
+        return [], types, status_pill("Add a token under Connection to begin.", "bad"), curl_list(api_url)
     try:
         jobs = _client(token, api_url).list_transcriptions()
     except (KawaError, requests.RequestException) as exc:
-        return [], {}, status_pill(f"Could not list transcriptions: {exc}", "bad"), curl_list(api_url)
+        return [], types, status_pill(f"Could not list your jobs: {exc}", "bad"), curl_list(api_url)
 
-    cache: dict[str, Any] = {}
-    rows: list[list[str]] = []
-    for job in jobs:
-        cache[job.job_id] = job.raw
-        result = job.result
-        rows.append([
-            job.status,
-            job.raw.get("original_filename") or job.raw.get("filename") or "—",
-            (result.language if result else None) or job.raw.get("language") or "—",
-            job.raw.get("created_at") or job.raw.get("received_at") or job.raw.get("updated_at") or "—",
-            job.job_id,
-        ])
-    msg = status_pill(f"{len(rows)} transcript{'s' if len(rows) != 1 else ''}", "good")
-    return rows, cache, msg, curl_list(api_url)
+    unresolved = [j.job_id for j in jobs if not _job_filename(j) and j.job_id not in types]
+    if unresolved:
+        with ThreadPoolExecutor(max_workers=min(8, len(unresolved))) as pool:
+            for job_id, kind in pool.map(lambda jid: _resolve_type(token, api_url, jid), unresolved):
+                types[job_id] = kind
+
+    rows = [
+        {
+            "job_id": job.job_id,
+            "type": "transcription" if _job_filename(job) else types.get(job.job_id, "unknown"),
+            "status": job.status,
+            "name": _job_filename(job) or "",
+            "created": str(job.raw.get("created_at") or job.raw.get("received_at") or ""),
+        }
+        for job in jobs
+    ]
+    # The API already orders by created_at descending; sorting again makes
+    # "latest run first" a property of the list rather than of the endpoint.
+    rows.sort(key=lambda row: row["created"], reverse=True)
+    return rows, types, status_pill(f"{len(rows)} job{'s' if len(rows) != 1 else ''}", "good"), curl_list(api_url)
 
 
-def open_transcript(
-    token: str, api_url: str, job_id: str, cache: dict[str, Any]
-) -> tuple[list[dict[str, str]], str, str, str, str, str, Any]:
-    """Fetch one job and render it the same way as a fresh transcription.
+def row_label(row: dict[str, str]) -> str:
+    """What a rail row says, after its type badge.
 
-    Returns: (chat, metrics, status, raw_json, curl_get, curl_delete, raw_open)
-    The last item expands the raw-response accordion on an error, for debugging.
+    The type is not repeated here: the ``mk-jobrow-<type>`` class draws it as
+    a badge. A postprocessing job has no filename, so it is identified by its
+    id in full, which the wrapping rail has room for.
+    """
+    when = (row["created"][:16] or "").replace("T", " ") or "no date"
+    what = row["name"] or row["job_id"]
+    suffix = "" if row["status"] == "succeeded" else f"  ·  {row['status']}"
+    return f"{what}  ·  {when}{suffix}"
+
+
+def row_classes(row: dict[str, str]) -> list[str]:
+    """Classes for one rail row: its type badge, and a failure marker.
+
+    Both are drawn in CSS rather than written into the button's label, which
+    can only hold plain text.
+    """
+    classes = ["mk-jobrow", f"mk-jobrow-{row['type']}"]
+    if row["status"] == "failed":
+        classes.append("mk-jobrow-failed")
+    return classes
+
+
+def rail_legend_html() -> str:
+    """The badge for each job type, keyed to the colours used in the rail."""
+    chips = "".join(
+        f'<span class="mk-tag mk-tag-{kind}">{_esc(JOB_TYPE_LABELS[kind])}</span>'
+        for kind in ("transcription", "summary", "tags")
+    )
+    return f'<div class="mk-legend"><small>Job types</small>{chips}</div>'
+
+
+def _upsert_row(rows: list[dict[str, str]], row: dict[str, str]) -> list[dict[str, str]]:
+    """Put a just-created or just-finished job at the top of the rail."""
+    return [row, *[r for r in (rows or []) if r["job_id"] != row["job_id"]]]
+
+
+# --------------------------------------------------------------------------- #
+# The detail panel
+# --------------------------------------------------------------------------- #
+#
+# One job's worth of UI, whichever of the three types it turns out to be, so
+# every path through open_job returns the same shape. _detail() fills in the
+# defaults (everything empty, every conditional section hidden) and each caller
+# overrides only the fields it has something to say about.
+
+DETAIL_FIELDS = (
+    "head", "job_id", "source", "source_note", "status",
+    "metrics", "chat", "transcript_visible",
+    "result", "result_visible",
+    "actions_visible", "pp_status", "summary", "tags",
+    "raw", "raw_open",
+    "get_curl", "delete_curl", "summarize_curl", "tag_curl",
+)
+
+
+def _detail(**overrides: Any) -> tuple[Any, ...]:
+    fields: dict[str, Any] = {
+        "head": "",
+        "job_id": "",
+        "source": gr.update(value="", visible=False),
+        "source_note": gr.update(visible=False),
+        "status": "",
+        "metrics": "",
+        "chat": [],
+        "transcript_visible": gr.update(visible=False),
+        "result": "",
+        "result_visible": gr.update(visible=False),
+        "actions_visible": gr.update(visible=False),
+        "pp_status": "",
+        "summary": "",
+        "tags": "",
+        "raw": "",
+        "raw_open": gr.update(open=False),
+        "get_curl": "",
+        "delete_curl": "",
+        "summarize_curl": "",
+        "tag_curl": "",
+    }
+    fields.update(overrides)
+    return tuple(fields[name] for name in DETAIL_FIELDS)
+
+
+def job_head_html(kind: str, job_id: str) -> str:
+    label = JOB_TYPE_LABELS.get(kind, "Job")
+    return (
+        f'<div class="mk-jobhead"><span class="mk-tag mk-tag-{_esc(kind)}">{_esc(label)}</span>'
+        f"<code>{_esc(job_id)}</code></div>"
+    )
+
+
+def job_status_pill(job: Job) -> str:
+    ready = {"transcription": "Transcript ready", "summary": "Summary ready", "tags": "Tags ready"}
+    if job.status == "succeeded":
+        return status_pill(ready.get(job.type, "Ready"), "good")
+    if job.status == "failed":
+        err = job.error or {}
+        return status_pill(f"Failed: {err.get('message') or err.get('code') or 'The job failed.'}", "bad")
+    return status_pill(f"{job.status.capitalize()}… open it again shortly.", "pending")
+
+
+def derived_block(title: str, job_id: str, inner: str) -> str:
+    """Wrap a summary or tag set with the id of the job that produced it."""
+    return f'<div class="mk-derived"><small>{_esc(title)} · {_esc(job_id)}</small>{inner}</div>'
+
+
+def fetch_derived(client: KawaClient, dimension: str, job_id: str | None) -> str:
+    """Render a postprocessing job that was derived from the open transcript."""
+    if not job_id:
+        return ""
+    title = JOB_TYPE_LABELS[dimension]
+    try:
+        job = client.get_transcription(job_id)
+    except (KawaError, requests.RequestException) as exc:
+        return derived_block(title, job_id, f'<div class="mk-empty">Could not fetch it: {_esc(exc)}</div>')
+    if job.status == "succeeded":
+        return derived_block(title, job_id, postprocessing_html(job))
+    if job.status == "failed":
+        err = job.error or {}
+        detail = err.get("message") or err.get("code") or "the job failed"
+        return derived_block(title, job_id, f'<div class="mk-empty">Failed: {_esc(detail)}.</div>')
+    return derived_block(title, job_id, status_pill(f"{job.status.capitalize()}… reopen this job to check.", "pending"))
+
+
+def open_job(job_id: str, token: str, api_url: str, pairs: dict[str, Any]) -> tuple[Any, ...]:
+    """Fetch one job and lay it out according to its type.
+
+    A transcription gets its transcript, the two postprocessing buttons, and
+    whatever has already been derived from it. A summary or tags job gets its
+    result and the transcription it came from, which is known only because
+    this playground recorded the pairing: see ``record_pair``.
     """
     collapsed, expanded = gr.update(open=False), gr.update(open=True)
     job_id = (job_id or "").strip()
-    curls = (curl_get(api_url, job_id), curl_delete(api_url, job_id))
+    curls = {
+        "get_curl": curl_get(api_url, job_id),
+        "delete_curl": curl_delete(api_url, job_id),
+        "summarize_curl": curl_postprocess(api_url, "summary", job_id),
+        "tag_curl": curl_postprocess(api_url, "tags", job_id),
+    }
     if not job_id:
-        return [], "", status_pill("Select a row or paste a job id.", "bad"), "", *curls, collapsed
+        return _detail(status=status_pill("Pick a job from the list.", ""), **curls)
     if not (token or "").strip():
-        return [], "", status_pill("Add a token under Connection to sign in.", "bad"), "", *curls, collapsed
+        return _detail(status=status_pill("Add a token under Connection to sign in.", "bad"), **curls)
+
     client = _client(token, api_url)
     try:
         job = client.get_transcription(job_id)
     except (KawaError, requests.RequestException) as exc:
-        return [], "", status_pill(f"Could not fetch job: {exc}", "bad"), error_dump(exc), *curls, expanded
+        return _detail(
+            job_id=job_id,
+            status=status_pill(f"Could not fetch job: {exc}", "bad"),
+            raw=error_dump(exc),
+            raw_open=expanded,
+            **curls,
+        )
 
     raw = response_dump(client.last_status, client.last_headers, job.raw)
-    if job.status == "succeeded" and job.result:
-        return transcript_to_messages(job.result) if job.result else [],
+    common = {
+        "head": job_head_html(job.type, job_id),
+        "job_id": job_id,
+        "status": job_status_pill(job),
+        "raw": raw,
+        "raw_open": expanded if job.status == "failed" else collapsed,
+        **curls,
+    }
+
+    if job.type == "transcription":
+        derived = (pairs or {}).get("by_source", {}).get(job_id, {})
+        return _detail(
+            metrics=metrics_html(job),
+            chat=transcript_to_messages(job.result) if job.result else [],
             transcript_visible=gr.update(visible=True),
             # Nothing can be derived from a job that has not succeeded, so the
             # buttons stay hidden rather than offering a guaranteed 409.
@@ -1015,7 +1285,7 @@ def tag(
 def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     job_id = (job_id or "").strip()
     if not job_id:
-        return status_pill("Paste a job id to delete.", "bad"), ""
+        return status_pill("Open a job to delete it.", "bad"), ""
     try:
         body = _client(token, api_url).delete_transcription(job_id)
     except (KawaError, requests.RequestException) as exc:
@@ -1023,13 +1293,18 @@ def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     return status_pill("Deleted", "good"), _pretty_json(body)
 
 
-def disconnect() -> tuple[str, str, list[list[str]], dict[str, Any], str]:
-    """Clear the token and reset the playground."""
+def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str]:
+    """Clear the token and reset the playground.
+
+    The recorded pairings are left alone: they are job ids this browser
+    produced, not credentials, and they are what makes a summary's source
+    traceable after signing back in.
+    """
     return (
         "",                                     # token box
         signed_in_html(""),                     # connection line
-        [],                                     # jobs table
-        {},                                     # cache
+        [],                                     # job rail
+        {},                                     # resolved-type cache
         status_pill("Disconnected.", ""),       # list status
     )
 
@@ -1074,7 +1349,6 @@ def add_sample_from_device(
 # --------------------------------------------------------------------------- #
 
 DEFAULT_METADATA = '{\n  "source": "playground"\n}'
-JOB_TABLE_HEADERS = ["Status", "File", "Language", "Created", "Job ID"]
 # Sample selected on first load; small and clean, so it works everywhere.
 DEFAULT_SAMPLE = "jackhammer.wav"
 
@@ -1086,7 +1360,16 @@ def build_app() -> gr.Blocks:
     first_file = str(first_path) if first_path else None
 
     with gr.Blocks(title="Makimoto Kawa · Playground") as app:
-        cache_state = gr.State({})
+        # The job rail's rows, newest first, and the resolved type of each job
+        # id seen so far (a type never changes, so it is only looked up once).
+        jobs_state = gr.State([])
+        types_state = gr.State({})
+        # Which transcription each summary or tags job came from. The API keeps
+        # no such link, so this is the only record of it; browser storage means
+        # it survives a reload without ever reaching the server.
+        pairs_state = gr.BrowserState(
+            {"by_source": {}, "by_result": {}}, storage_key="mk-postprocessing-pairs"
+        )
 
         # -- Masthead ----------------------------------------------------- #
         with gr.Row(equal_height=True):
@@ -1126,11 +1409,11 @@ def build_app() -> gr.Blocks:
                 elem_classes=["mk-hint"],
             )
 
-        with gr.Tabs():
+        with gr.Tabs() as tabs:
             # ============================================================= #
             # Tab 1 — Transcribe
             # ============================================================= #
-            with gr.Tab("Transcribe"):
+            with gr.Tab("Transcribe", id="transcribe"):
                 gr.HTML(
                     '<div class="mk-lede">Turn a recording into a transcript.</div>'
                     '<div class="mk-lede-sub">Submit audio, then watch the job poll to completion. '
@@ -1197,15 +1480,25 @@ def build_app() -> gr.Blocks:
                             group_consecutive_messages=False,
                             placeholder="Your transcript will appear here as a conversation.",
                         )
-                        job_id_out = gr.Textbox(label="Job ID", interactive=False, visible=False)
+                        with gr.Row(equal_height=True):
+                            job_id_out = gr.Textbox(
+                                label="Job ID",
+                                interactive=False,
+                                buttons=["copy"],
+                                scale=3,
+                                info="Copy it, or carry it straight over to summarise or tag this call.",
+                            )
+                            transcribe_pp_btn = gr.Button(
+                                "Summarise or tag", variant="secondary", scale=1, min_width=150
+                            )
                         with gr.Accordion("{ } Raw response (status, headers, body)", open=False) as transcribe_raw_acc:
                             transcribe_raw = gr.Code(value="", language="json", label="Auto-expands on an error, for debugging")
 
             # ============================================================= #
-            # Tab 2 — Your transcriptions
+            # Tab 2 — Your jobs  (rail on the left, one job's detail on the right)
             # ============================================================= #
-            with gr.Tab("Your transcriptions"):
-                with gr.Row():
+            with gr.Tab("Your jobs", id="jobs"):
+                with gr.Row(equal_height=False):
                     with gr.Column(scale=2):
                         with gr.Row(equal_height=True):
                             gr.HTML(
@@ -1214,35 +1507,108 @@ def build_app() -> gr.Blocks:
                                 padding=False,
                             )
                             refresh_btn = gr.Button("Refresh", variant="secondary", scale=0, min_width=110)
-                        list_status = gr.HTML(status_pill("Refresh to load your transcriptions.", ""))
-                        jobs_table = gr.Dataframe(
-                            headers=JOB_TABLE_HEADERS,
-                            datatype=["str"] * len(JOB_TABLE_HEADERS),
-                            interactive=False,
-                            wrap=True,
-                            elem_classes=["mk-table"],
-                        )
+                        list_status = gr.HTML(status_pill("Refresh to load your jobs.", ""))
+                        gr.HTML(rail_legend_html(), padding=False)
+
+                        with gr.Column(elem_classes=["mk-joblist"]):
+                            # Rebuilt whenever the rail changes: on a refresh,
+                            # and when summarising or tagging adds a job to it.
+                            # Each row closes over its own id, so a click needs
+                            # nothing from the selection state.
+                            @gr.render(inputs=[jobs_state])
+                            def render_job_rail(rows: list[dict[str, str]]):
+                                if not rows:
+                                    gr.HTML(
+                                        '<div class="mk-empty">Nothing loaded yet. Refresh to list '
+                                        "your transcriptions, summaries and tag sets.</div>"
+                                    )
+                                    return
+                                for row in rows:
+                                    gr.Button(
+                                        row_label(row),
+                                        variant="secondary",
+                                        elem_classes=row_classes(row),
+                                    ).click(
+                                        # Default argument, not a closure over
+                                        # the loop variable, so every row keeps
+                                        # the id it was rendered with.
+                                        lambda token, api_url, pairs, jid=row["job_id"]: open_job(
+                                            jid, token, api_url, pairs
+                                        ),
+                                        inputs=[token_box, api_url_box, pairs_state],
+                                        outputs=detail_outputs,
+                                    )
+
                         with gr.Accordion("{ } Equivalent curl", open=False):
                             list_curl = gr.Code(value=curl_list(ENV_API_URL), language="shell", label="List jobs")
+
                     with gr.Column(scale=3):
                         gr.HTML(
                             '<div class="mk-endpoint"><span class="mk-method get">GET</span>'
                             '<code>/v1/transcriptions/{job_id}</code></div>'
-                            '<div class="mk-hint">Click a row, or paste a job id, then open it.</div>'
+                            '<div class="mk-hint">Click a job on the left to open it here.</div>'
                         )
-                        with gr.Row():
-                            detail_job_id = gr.Textbox(label="Job ID", scale=3, placeholder="00000000-0000-…")
-                            open_btn = gr.Button("Open", variant="primary", scale=1, min_width=90)
+                        detail_head = gr.HTML("")
+                        detail_job_id = gr.Textbox(
+                            label="Job ID", interactive=False, buttons=["copy"], placeholder="00000000-0000-…"
+                        )
+                        source_box = gr.Textbox(
+                            label="Source transcription job ID",
+                            interactive=False,
+                            visible=False,
+                            buttons=["copy"],
+                            info=(
+                                "Reported by the API as 'source_job_id', falling back to this "
+                                "browser's own record of what it created."
+                            ),
+                        )
+                        source_note = gr.HTML(
+                            '<div class="mk-empty">Source transcription unknown. The job was created '
+                            "before the API began recording where a summary or tags job came from, or "
+                            "by another client, and this browser has no record of it either.</div>",
+                            visible=False,
+                        )
                         detail_status = gr.HTML("")
-                        detail_metrics = gr.HTML("")
-                        detail_chat = gr.Chatbot(
-                            label="Transcript",
-                            height=380,
-                            group_consecutive_messages=False,
-                            placeholder="Select a transcript to read it here.",
-                        )
+
+                        with gr.Column(visible=False) as transcript_group:
+                            detail_metrics = gr.HTML("")
+                            detail_chat = gr.Chatbot(
+                                label="Transcript",
+                                height=380,
+                                group_consecutive_messages=False,
+                                placeholder="Select a transcript to read it here.",
+                            )
+
+                        with gr.Column(visible=False) as result_group:
+                            detail_result = gr.HTML("")
+
+                        with gr.Column(visible=False) as actions_group:
+                            gr.HTML(
+                                '<div class="mk-endpoint"><span class="mk-method post">POST</span>'
+                                '<code>/v1/summarize</code>'
+                                '<span class="mk-method post">POST</span><code>/v1/tag</code></div>'
+                                '<div class="mk-hint">Each derives a new job from this transcript and '
+                                'appears in the rail on the left.</div>'
+                            )
+                            with gr.Row(equal_height=True):
+                                summarize_btn = gr.Button("Summarise", variant="primary")
+                                tag_btn = gr.Button("Tag", variant="primary")
+                            pp_status = gr.HTML("")
+                            derived_summary = gr.HTML("")
+                            derived_tags = gr.HTML("")
+
                         with gr.Accordion("{ } Equivalent curl", open=False):
                             get_curl = gr.Code(value=curl_get(ENV_API_URL, ""), language="shell", label="Fetch job")
+                            summarize_curl = gr.Code(
+                                value=curl_postprocess(ENV_API_URL, "summary", ""),
+                                language="shell",
+                                label="Summarise it",
+                            )
+                            tag_curl = gr.Code(
+                                value=curl_postprocess(ENV_API_URL, "tags", ""),
+                                language="shell",
+                                label="Tag it",
+                            )
                         with gr.Accordion("{ } Raw response (status, headers, body)", open=False) as detail_raw_acc:
                             detail_raw = gr.Code(value="", language="json", label="Auto-expands on an error, for debugging")
                         with gr.Accordion("Delete this job", open=False):
@@ -1256,12 +1622,24 @@ def build_app() -> gr.Blocks:
                             delete_curl = gr.Code(value=curl_delete(ENV_API_URL, ""), language="shell", label="Delete job")
                             delete_raw = gr.Code(value="", language="json", label="Delete response")
 
+        # The rail's rows are rendered before these exist, but the render only
+        # runs once a browser asks for the page, by which point it can see them.
+        detail_outputs = [
+            detail_head, detail_job_id, source_box, source_note, detail_status,
+            detail_metrics, detail_chat, transcript_group,
+            detail_result, result_group,
+            actions_group, pp_status, derived_summary, derived_tags,
+            detail_raw, detail_raw_acc,
+            get_curl, delete_curl, summarize_curl, tag_curl,
+        ]
+        assert len(detail_outputs) == len(DETAIL_FIELDS), "detail outputs must match DETAIL_FIELDS"
+
         # -- Wiring ------------------------------------------------------- #
         theme_btn.click(None, None, None, js=THEME_TOGGLE_JS)
         token_box.change(signed_in_html, inputs=[token_box], outputs=[signed_in])
         disconnect_btn.click(
             disconnect,
-            outputs=[token_box, signed_in, jobs_table, cache_state, list_status],
+            outputs=[token_box, signed_in, jobs_state, types_state, list_status],
         )
 
         # Transcribe tab
@@ -1292,32 +1670,36 @@ def build_app() -> gr.Blocks:
             outputs=[transcribe_status, transcript_chat, transcribe_metrics, transcribe_raw, job_id_out, transcribe_raw_acc],
         )
 
-        refresh_btn.click(
-            list_transcriptions_view,
-            inputs=[token_box, api_url_box],
-            outputs=[jobs_table, cache_state, list_status, list_curl],
-        )
+        # Your jobs
+        list_inputs = [token_box, api_url_box, types_state]
+        list_outputs = [jobs_state, types_state, list_status, list_curl]
+        refresh_btn.click(list_jobs_view, inputs=list_inputs, outputs=list_outputs)
 
-        # Transcriptions detail
-        jobs_table.select(select_row, inputs=[cache_state], outputs=[detail_job_id]).then(
-            open_transcript,
-            inputs=[token_box, api_url_box, detail_job_id, cache_state],
-            outputs=[detail_chat, detail_metrics, detail_status, detail_raw, get_curl, delete_curl, detail_raw_acc],
-        )
-        detail_job_id.change(
-            lambda url, jid: (curl_get(url, jid), curl_delete(url, jid)),
-            inputs=[api_url_box, detail_job_id],
-            outputs=[get_curl, delete_curl],
-        )
-        open_btn.click(
-            open_transcript,
-            inputs=[token_box, api_url_box, detail_job_id, cache_state],
-            outputs=[detail_chat, detail_metrics, detail_status, detail_raw, get_curl, delete_curl, detail_raw_acc],
-        )
+        pp_outputs = [
+            pp_status, derived_summary, derived_tags,
+            detail_raw, detail_raw_acc, pairs_state, jobs_state,
+        ]
+        pp_inputs = [detail_job_id, token_box, api_url_box, pairs_state, jobs_state]
+        summarize_btn.click(summarize, inputs=pp_inputs, outputs=pp_outputs)
+        tag_btn.click(tag, inputs=pp_inputs, outputs=pp_outputs)
+
+        # Deleting leaves the rail stale, so relist once it has gone through.
         delete_btn.click(
             delete_transcript,
             inputs=[token_box, api_url_box, detail_job_id],
             outputs=[delete_status, delete_raw],
+        ).then(list_jobs_view, inputs=list_inputs, outputs=list_outputs)
+
+        # A fresh transcription is not in the rail yet: relist, then open it on
+        # the jobs tab, where the two postprocessing buttons live.
+        transcribe_pp_btn.click(
+            lambda jid: gr.update(selected="jobs") if (jid or "").strip() else gr.update(),
+            inputs=[job_id_out],
+            outputs=[tabs],
+        ).then(list_jobs_view, inputs=list_inputs, outputs=list_outputs).then(
+            open_job,
+            inputs=[job_id_out, token_box, api_url_box, pairs_state],
+            outputs=detail_outputs,
         )
 
     return app

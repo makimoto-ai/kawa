@@ -42,12 +42,24 @@ The playground follows the one flow the API is built around, across two tabs:
 - See a waveform of the audio before you send it.
 - Submit it (`POST /v1/transcriptions`) and watch the job poll to completion.
 - Read the result as a speaker-separated, timestamped conversation.
+- Copy the job id, or open it straight away under **Your jobs**.
 
-**Your transcriptions**
-- List every job on your account (`GET /v1/transcriptions`).
-- Open any one (`GET /v1/transcriptions/{job_id}`) and read it the same way.
-- Delete a job (`DELETE /v1/transcriptions/{job_id}`) where the deployment
-  supports cleanup.
+**Your jobs**
+- A scrollable list on the left shows every job on your account, most recent
+  first. Each entry is labelled **Transcription**, **Summary** or **Tags**,
+  colour-coded to match. A legend above the list explains the
+  colours, and any failed job is clearly flagged.
+- Click a job to open its full detail on the right.
+- Opening a transcription shows the full conversation, with **Summarise** and
+  **Tag** options beneath it. Each creates a new job, appears in the list as
+  it processes, and shows as a result card once complete. Reopening the
+  transcription later still shows these results.
+- Opening a summary or tags job shows its result, along with a reference back
+  to the transcription it was generated from.
+- Jobs can be deleted where the deployment supports this.
+
+If a summary or tags job originates from a transcription, it is linked back to its
+source transcription, so you can always trace a result to where it came from. 
 
 Every action shows the exact `curl` equivalent with a copy button, and the raw
 JSON response is one accordion away. The token is referenced as
