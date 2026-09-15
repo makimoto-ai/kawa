@@ -24,4 +24,4 @@ This document is a high-level summary of where Kawa is going. The roadmap will b
  
 ## Get involved
  
-The roadmap is shaped by developer feedback and Discord conversations. If a capability is missing, tell us at hello@makimoto.ai or on Discord.
+The roadmap is shaped by developer feedback and Discord conversations. If a capability is missing, tell us at hello@makimoto.ai or on [Discord](https://discord.gg/ePBgMWjXk).

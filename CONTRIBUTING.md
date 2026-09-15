@@ -8,7 +8,7 @@ Kawa is live. The transcription API client, the interactive playground, and the 
  
 - **Trying the [playground and reference client](demo)** and telling us what works and what does not
 - **Filing issues** for bugs, documentation gaps, design questions, or capability requests
-- **Joining our Discord** (coming soon) to share what you would like Kawa to do well
+- **Joining our [Discord](https://discord.gg/ePBgMWjXk)** to share what you would like Kawa to do well
  
 ## Pull requests
  
@@ -42,4 +42,4 @@ By contributing to Kawa, you agree that your contributions will be licensed unde
  
 ## Questions
  
-For questions about contributing, reach out on Discord or email [contact@makimoto.ai](mailto:contact@makimoto.ai).
+For questions about contributing, reach out on [Discord](https://discord.gg/ePBgMWjXk) or email [contact@makimoto.ai](mailto:contact@makimoto.ai).
