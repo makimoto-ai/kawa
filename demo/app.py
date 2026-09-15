@@ -76,6 +76,12 @@ ENV_API_URL = os.getenv("MAKIMOTO_API_URL", DEFAULT_API_URL).rstrip("/")
 ENV_TOKEN = os.getenv("MAKIMOTO_API_TOKEN", "")
 ENV_SAMPLE_DIR = Path(os.getenv("MAKIMOTO_SAMPLE_DIR", str(DEFAULT_SAMPLE_DIR))).expanduser()
 
+# How many jobs one page of the rail holds.
+JOBS_PAGE_SIZE = 20
+
+# What one fetch asks the API for while filling that page.
+FETCH_PAGE_SIZE = 100
+
 
 # --------------------------------------------------------------------------- #
 # curl builders  (documentation that doubles as copy-paste shell commands)
@@ -90,10 +96,17 @@ def _shell_quote(value: str) -> str:
     return "'" + str(value).replace("'", "'\"'\"'") + "'"
 
 
-def curl_list(api_url: str) -> str:
+def curl_list(api_url: str, *, limit: int | None = None, cursor: str | None = None) -> str:
+    """The list call, including whichever page of it the rail is showing."""
+    query = "&".join(
+        part
+        for part in (f"limit={limit}" if limit else "", f"cursor={cursor}" if cursor else "")
+        if part
+    )
+    url = api_url.rstrip("/") + "/v1/transcriptions" + (f"?{query}" if query else "")
     return (
         "curl -sS \\\n"
-        f"  {_shell_quote(api_url.rstrip('/') + '/v1/transcriptions')} \\\n"
+        f"  {_shell_quote(url)} \\\n"
         '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN"'
     )
 
@@ -897,34 +910,21 @@ def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, str]:
         return job_id, "unknown"
 
 
-def list_jobs_view(
-    token: str, api_url: str, known_types: dict[str, str]
-) -> tuple[list[dict[str, str]], dict[str, str], str, str]:
-    """GET /v1/transcriptions, labelled by job type, newest first.
+def _rows_for(
+    jobs: list[Job], token: str, api_url: str, types: dict[str, str]
+) -> list[dict[str, str]]:
+    """Turn one page of jobs into rail rows, labelled by job type.
 
-    The list endpoint reports no ``type``, so each row has to be labelled here.
-    Only a transcription has an upload behind it, so a row *with* a filename is
-    certainly one; a row without needs a single GET to tell a summary from a
-    tags job, and those run concurrently. Types never change, so the answers
-    are cached for the session and a later refresh only resolves new rows.
-
-    Returns: (rows, type_cache, list_status, list_curl)
+    Job types are cached for the session (``types`` is updated in place) and a later
+    page or refresh only resolves rows it has not seen before.
     """
-    types = dict(known_types or {})
-    if not (token or "").strip():
-        return [], types, status_pill("Add a token under Connection to begin.", "bad"), curl_list(api_url)
-    try:
-        jobs = _client(token, api_url).list_transcriptions()
-    except (KawaError, requests.RequestException) as exc:
-        return [], types, status_pill(f"Could not list your jobs: {exc}", "bad"), curl_list(api_url)
-
     unresolved = [j.job_id for j in jobs if not _job_filename(j) and j.job_id not in types]
     if unresolved:
         with ThreadPoolExecutor(max_workers=min(8, len(unresolved))) as pool:
             for job_id, kind in pool.map(lambda jid: _resolve_type(token, api_url, jid), unresolved):
                 types[job_id] = kind
 
-    rows = [
+    return [
         {
             "job_id": job.job_id,
             "type": "transcription" if _job_filename(job) else types.get(job.job_id, "unknown"),
@@ -934,6 +934,79 @@ def list_jobs_view(
         }
         for job in jobs
     ]
+
+
+def _is_filtered(filters: tuple[str, str, str]) -> bool:
+    """Whether any of the (type, status, since) filters narrows."""
+    type_filter, status_filter, since_filter = filters
+    if any(f not in ("", "all") for f in (type_filter, status_filter)):
+        return True
+    return bool((since_filter or "").strip())
+
+
+def _jobs_loaded_pill(total: int, loaded: int, filtered: bool) -> str:
+    """The rail's status line: the account's total, then how much is on screen."""
+    jobs = f"{total} job{'s' if total != 1 else ''}"
+    return status_pill(f"{jobs} · {loaded} {'matching ' if filtered else ''}loaded", "good")
+
+
+def _fill_page(
+    client: KawaClient,
+    token: str,
+    api_url: str,
+    types: dict[str, str],
+    cursor: str | None,
+    filters: tuple[str, str, str],
+    want: int = JOBS_PAGE_SIZE,
+) -> tuple[list[dict[str, str]], str | None]:
+    """Walk pages from ``cursor`` until ``want`` rows match, or they run out.
+
+    Returns the matching rows and the cursor to resume from, which is ``None` `once the account's list is exhausted.
+    """
+    filtering = _is_filtered(filters)
+    limit = FETCH_PAGE_SIZE if filtering else want
+    matched: list[dict[str, str]] = []
+    while len(matched) < want:
+        page = client.list_transcriptions(limit=limit, cursor=cursor)
+        matched.extend(_rows_matching(_rows_for(page.jobs, token, api_url, types), *filters))
+        cursor = page.next_cursor
+        if not cursor:
+            return matched, None
+    return matched, cursor
+
+
+def list_jobs_view(
+    token: str,
+    api_url: str,
+    known_types: dict[str, str],
+    type_filter: str = "all",
+    status_filter: str = "all",
+    since_filter: str = "",
+) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
+    """GET /v1/transcriptions - the newest jobs matching the filters.
+
+    Returns: (rows, type_cache, list_status, list_curl, next_cursor, more_btn, total)
+    """
+    types = dict(known_types or {})
+    filters = (type_filter, status_filter, since_filter)
+    filtered = _is_filtered(filters)
+    if not (token or "").strip():
+        return (
+            [], types,
+            status_pill("Add a token under Connection to begin.", "bad"),
+            curl_list(api_url), None, gr.update(visible=False), 0,
+        )
+    try:
+        client = _client(token, api_url)
+        rows, cursor = _fill_page(client, token, api_url, types, None, filters)
+        total = client.count_transcriptions()
+    except (KawaError, requests.RequestException) as exc:
+        return (
+            [], types,
+            status_pill(f"Could not list your jobs: {exc}", "bad"),
+            curl_list(api_url), None, gr.update(visible=False), 0,
+        )
+
     # The API already orders by created_at descending; sorting again makes
     # "latest run first" a property of the list rather than of the endpoint.
     rows.sort(key=lambda row: row["created"], reverse=True)
@@ -1293,7 +1366,7 @@ def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     return status_pill("Deleted", "good"), _pretty_json(body)
 
 
-def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str]:
+def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str, None, Any, int]:
     """Clear the token and reset the playground.
 
     The recorded pairings are left alone: they are job ids this browser
@@ -1306,6 +1379,9 @@ def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str]:
         [],                                     # job rail
         {},                                     # resolved-type cache
         status_pill("Disconnected.", ""),       # list status
+        None,                                   # pagination cursor
+        gr.update(visible=False),               # load-more button
+        0,                                      # job total
     )
 
 
@@ -1364,6 +1440,11 @@ def build_app() -> gr.Blocks:
         # id seen so far (a type never changes, so it is only looked up once).
         jobs_state = gr.State([])
         types_state = gr.State({})
+        # The cursor for the page after the one the rail is showing, or None
+        # once the walk has reached the end, and the account's job total that
+        # the same refresh counted. Both reset by every refresh.
+        cursor_state = gr.State(None)
+        total_state = gr.State(0)
         # Which transcription each summary or tags job came from. The API keeps
         # no such link, so this is the only record of it; browser storage means
         # it survives a reload without ever reaching the server.
@@ -1510,17 +1591,38 @@ def build_app() -> gr.Blocks:
                         list_status = gr.HTML(status_pill("Refresh to load your jobs.", ""))
                         gr.HTML(rail_legend_html(), padding=False)
 
+                        with gr.Row(equal_height=True):
+                            type_filter_dd = gr.Dropdown(
+                                label="Type",
+                                choices=[
+                                    ("All types", "all"),
+                                    ("Transcription", "transcription"),
+                                    ("Summary", "summary"),
+                                    ("Tags", "tags"),
+                                ],
+                                value="all",
+                                scale=1,
+                            )
+                            status_filter_dd = gr.Dropdown(
+                                label="Outcome",
+                                choices=[("All", "all"), ("Succeeded", "succeeded"), ("Failed", "failed")],
+                                value="all",
+                                scale=1,
+                            )
+                            since_filter_box = gr.Textbox(
+                                label="Since",
+                                placeholder="YYYY-MM-DD",
+                                scale=1,
+                            )
+
                         with gr.Column(elem_classes=["mk-joblist"]):
-                            # Rebuilt whenever the rail changes: on a refresh,
-                            # and when summarising or tagging adds a job to it.
-                            # Each row closes over its own id, so a click needs
-                            # nothing from the selection state.
                             @gr.render(inputs=[jobs_state])
                             def render_job_rail(rows: list[dict[str, str]]):
                                 if not rows:
                                     gr.HTML(
-                                        '<div class="mk-empty">Nothing loaded yet. Refresh to list '
-                                        "your transcriptions, summaries and tag sets.</div>"
+                                        '<div class="mk-empty">Nothing to show. Refresh to list your '
+                                        "transcriptions, summaries and tag sets, or widen the filters."
+                                        "</div>"
                                     )
                                     return
                                 for row in rows:
@@ -1538,6 +1640,10 @@ def build_app() -> gr.Blocks:
                                         inputs=[token_box, api_url_box, pairs_state],
                                         outputs=detail_outputs,
                                     )
+
+                        # Hidden until a fetch reports a next_cursor, and hidden
+                        # again on the page that reports none.
+                        more_btn = gr.Button("Load more", variant="secondary", visible=False)
 
                         with gr.Accordion("{ } Equivalent curl", open=False):
                             list_curl = gr.Code(value=curl_list(ENV_API_URL), language="shell", label="List jobs")
@@ -1639,7 +1745,10 @@ def build_app() -> gr.Blocks:
         token_box.change(signed_in_html, inputs=[token_box], outputs=[signed_in])
         disconnect_btn.click(
             disconnect,
-            outputs=[token_box, signed_in, jobs_state, types_state, list_status],
+            outputs=[
+                token_box, signed_in, jobs_state, types_state,
+                list_status, cursor_state, more_btn, total_state,
+            ],
         )
 
         # Transcribe tab
@@ -1670,10 +1779,22 @@ def build_app() -> gr.Blocks:
             outputs=[transcribe_status, transcript_chat, transcribe_metrics, transcribe_raw, job_id_out, transcribe_raw_acc],
         )
 
-        # Your jobs
-        list_inputs = [token_box, api_url_box, types_state]
-        list_outputs = [jobs_state, types_state, list_status, list_curl]
+        # Your jobs.
+        filter_inputs = [type_filter_dd, status_filter_dd, since_filter_box]
+        list_inputs = [token_box, api_url_box, types_state, *filter_inputs]
+        list_outputs = [jobs_state, types_state, list_status, list_curl, cursor_state, more_btn, total_state]
         refresh_btn.click(list_jobs_view, inputs=list_inputs, outputs=list_outputs)
+        more_btn.click(
+            load_more_jobs_view,
+            inputs=[
+                token_box, api_url_box, types_state, jobs_state,
+                cursor_state, total_state, *filter_inputs,
+            ],
+            outputs=list_outputs,
+        )
+        # Filters are applied by the fetch.
+        for control in filter_inputs:
+            control.change(list_jobs_view, inputs=list_inputs, outputs=list_outputs)
 
         pp_outputs = [
             pp_status, derived_summary, derived_tags,
