@@ -240,6 +240,13 @@ class Job:
         return err if isinstance(err, dict) else None
 
 
+@dataclass(frozen=True)
+class JobPage:
+    """One page of ``GET /v1/transcriptions``, and the cursor after it."""
+    jobs: list[Job]
+    next_cursor: str | None = None
+
+
 class KawaClient:
     """Minimal client for the Makimoto Kawa transcription API.
 
@@ -295,13 +302,50 @@ class KawaClient:
 
     # -- endpoints ---------------------------------------------------------- #
 
-    def list_transcriptions(self) -> list[Job]:
-        """GET /v1/transcriptions - all jobs for the authenticated account."""
-        body = self._request("GET", "/v1/transcriptions")
+    def list_transcriptions(
+        self, *, limit: int | None = None, cursor: str | None = None
+    ) -> JobPage:
+        """GET /v1/transcriptions - one page of jobs, newest first.
+
+        The endpoint is cursor-paginated: it answers with at most ``limit``
+        jobs (the API defaults to 10, and caps at 100).
+        """
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor:
+            params["cursor"] = cursor
+        body = self._request("GET", "/v1/transcriptions", params=params or None)
         items = body.get("transcriptions") or body.get("jobs") or body.get("data") or []
         if isinstance(items, dict):
             items = items.get("items", [])
-        return [Job.from_dict(item) for item in items if isinstance(item, dict)]
+        next_cursor = body.get("next_cursor")
+        return JobPage(
+            jobs=[Job.from_dict(item) for item in items if isinstance(item, dict)],
+            next_cursor=str(next_cursor) if next_cursor else None,
+        )
+
+    def count_transcriptions(self, *, page_size: int = 100) -> int:
+        """How many jobs the account has, in total."""
+        total = 0
+        cursor: str | None = None
+        while True:
+            page = self.list_transcriptions(limit=page_size, cursor=cursor)
+            total += len(page.jobs)
+            cursor = page.next_cursor
+            if not cursor:
+                return total
+
+    def list_all_transcriptions(self, *, page_size: int = 100) -> list[Job]:
+        """Every job for the account, by walking the pages to the last one."""
+        jobs: list[Job] = []
+        cursor: str | None = None
+        while True:
+            page = self.list_transcriptions(limit=page_size, cursor=cursor)
+            jobs.extend(page.jobs)
+            cursor = page.next_cursor
+            if not cursor:
+                return jobs
 
     def create_transcription(
         self,
