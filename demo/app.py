@@ -500,16 +500,20 @@ CSS = f"""
 .mk-joblist button.mk-jobrow-unknown {{ border-left-color: var(--mk-muted) !important; }}
 .mk-joblist button.mk-jobrow-unknown::after {{ content: "JOB"; background: var(--mk-muted); }}
 
-/* A failed job is marked at the start of its row, so the rail can be scanned
-   for trouble without opening anything. ::after is already the type badge,
-   which is why this one leads rather than follows. */
-.mk-joblist button.mk-jobrow-failed::before {{
-  content: "!"; display: inline-block; vertical-align: middle;
+/* Outcome is marked at the start of the row, so the rail can be scanned for
+   trouble (or for what finished cleanly) without opening anything. ::after is
+   already the type badge, which is why these lead rather than follow. The
+   marker carries the outcome on its own, so the label never spells it out. */
+.mk-joblist button.mk-jobrow-failed::before,
+.mk-joblist button.mk-jobrow-succeeded::before {{
+  display: inline-block; vertical-align: middle;
   margin-right: 7px; position: relative; top: -1px;
   width: 16px; height: 16px; border-radius: 999px;
-  background: var(--mk-bad); color: #FFFFFF;
+  color: #FFFFFF;
   font-size: 11px; font-weight: 700; line-height: 16px; text-align: center;
 }}
+.mk-joblist button.mk-jobrow-failed::before {{ content: "!"; background: var(--mk-bad); }}
+.mk-joblist button.mk-jobrow-succeeded::before {{ content: "\\2713"; background: var(--mk-good); }}
 
 /* Legend: the same three badges, so the rail needs no explaining. */
 .mk-legend {{ display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }}
@@ -1010,31 +1014,84 @@ def list_jobs_view(
     # The API already orders by created_at descending; sorting again makes
     # "latest run first" a property of the list rather than of the endpoint.
     rows.sort(key=lambda row: row["created"], reverse=True)
-    return rows, types, status_pill(f"{len(rows)} job{'s' if len(rows) != 1 else ''}", "good"), curl_list(api_url)
+    return (
+        rows, types,
+        _jobs_loaded_pill(total, len(rows), filtered),
+        curl_list(api_url, limit=FETCH_PAGE_SIZE),
+        cursor,
+        gr.update(visible=bool(cursor)),
+        total,
+    )
+
+
+def load_more_jobs_view(
+    token: str,
+    api_url: str,
+    known_types: dict[str, str],
+    rows: list[dict[str, str]],
+    cursor: str | None,
+    total: int,
+    type_filter: str,
+    status_filter: str,
+    since_filter: str,
+) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
+    """Another page of matches, appended to what the rail already shows.
+
+    Returns: (rows, type_cache, list_status, list_curl, next_cursor, more_btn, total)
+    """
+    types = dict(known_types or {})
+    loaded = list(rows or [])
+    filters = (type_filter, status_filter, since_filter)
+    filtered = _is_filtered(filters)
+    if not cursor:
+        return (
+            loaded, types,
+            _jobs_loaded_pill(total, len(loaded), filtered),
+            curl_list(api_url, limit=FETCH_PAGE_SIZE), None, gr.update(visible=False), total,
+        )
+    try:
+        client = _client(token, api_url)
+        fresh, next_cursor = _fill_page(client, token, api_url, types, cursor, filters)
+    except (KawaError, requests.RequestException) as exc:
+        return (
+            loaded, types,
+            status_pill(f"Could not load more jobs: {exc}", "bad"),
+            curl_list(api_url, limit=FETCH_PAGE_SIZE, cursor=cursor), cursor, gr.update(visible=True), total,
+        )
+
+    # A job already on the rail is not added twice: a job created between two
+    # page fetches shifts the window, and can otherwise arrive on both sides.
+    seen = {row["job_id"] for row in loaded}
+    combined = loaded + [row for row in fresh if row["job_id"] not in seen]
+    combined.sort(key=lambda row: row["created"], reverse=True)
+    return (
+        combined, types,
+        _jobs_loaded_pill(total, len(combined), filtered),
+        curl_list(api_url, limit=FETCH_PAGE_SIZE, cursor=next_cursor),
+        next_cursor,
+        gr.update(visible=bool(next_cursor)),
+        total,
+    )
 
 
 def row_label(row: dict[str, str]) -> str:
-    """What a rail row says, after its type badge.
-
-    The type is not repeated here: the ``mk-jobrow-<type>`` class draws it as
-    a badge. A postprocessing job has no filename, so it is identified by its
-    id in full, which the wrapping rail has room for.
-    """
+    """What a rail row says, after its type badge."""
     when = (row["created"][:16] or "").replace("T", " ") or "no date"
     what = row["name"] or row["job_id"]
-    suffix = "" if row["status"] == "succeeded" else f"  ·  {row['status']}"
+    suffix = "" if row["status"] in ("succeeded", "failed") else f"  ·  {row['status']}"
     return f"{what}  ·  {when}{suffix}"
 
 
 def row_classes(row: dict[str, str]) -> list[str]:
-    """Classes for one rail row: its type badge, and a failure marker.
+    """Classes for one rail row: its type badge, and its outcome marker.
 
     Both are drawn in CSS rather than written into the button's label, which
-    can only hold plain text.
+    can only hold plain text. Only the two terminal outcomes get a marker; a
+    job still queued or processing has none, and says so in its label instead.
     """
     classes = ["mk-jobrow", f"mk-jobrow-{row['type']}"]
-    if row["status"] == "failed":
-        classes.append("mk-jobrow-failed")
+    if row["status"] in ("succeeded", "failed"):
+        classes.append(f"mk-jobrow-{row['status']}")
     return classes
 
 
@@ -1045,6 +1102,20 @@ def rail_legend_html() -> str:
         for kind in ("transcription", "summary", "tags")
     )
     return f'<div class="mk-legend"><small>Job types</small>{chips}</div>'
+
+
+def _rows_matching(
+    rows: list[dict[str, str]], type_filter: str, status_filter: str, since_filter: str
+) -> list[dict[str, str]]:
+    """Which rail rows survive the type/status/since filters, in one pass."""
+    since = (since_filter or "").strip()
+    return [
+        row
+        for row in rows
+        if type_filter in ("", "all") or row["type"] == type_filter
+        if status_filter in ("", "all") or row["status"] == status_filter
+        if not since or row["created"][:10] >= since
+    ]
 
 
 def _upsert_row(rows: list[dict[str, str]], row: dict[str, str]) -> list[dict[str, str]]:
@@ -1481,7 +1552,6 @@ def build_app() -> gr.Blocks:
                     label="Base URL",
                     value=ENV_API_URL,
                     scale=2,
-                    info="Production: https://api.makimoto.ai",
                 )
             gr.Markdown(
                 "Generate a token in the [dashboard](https://makimoto.ai), or `export "
