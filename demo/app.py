@@ -1,6 +1,6 @@
 """Makimoto Kawa - Transcription API playground.
 
-A Gradio UI over the Makimoto transcription API: connect a token, submit a
+A Gradio UI over the Makimoto transcription API: connect an API key, submit a
 recording and watch it poll to completion, then read the transcript as the
 conversation it came from.
 
@@ -27,9 +27,9 @@ The API contract used here:
     POST   /v1/summarize                 -> summarise a finished transcription
     POST   /v1/tag                       -> tag a finished transcription
 
-Authenticate every request with a dashboard token:
+Authenticate every request with an API key, created from the dashboard:
 
-    Authorization: Bearer <makimoto_api_token>
+    Authorization: Bearer <makimoto_api_key>
 """
 
 from __future__ import annotations
@@ -70,10 +70,10 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_SAMPLE_DIR = ROOT_DIR / "samples-audio"
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".webm"}
 
-# Environment defaults. The token is read once for convenience when developing
+# Environment defaults. The key is read once for convenience when developing
 # locally; the UI keeps whatever you type only in the local browser session.
 ENV_API_URL = os.getenv("MAKIMOTO_API_URL", DEFAULT_API_URL).rstrip("/")
-ENV_TOKEN = os.getenv("MAKIMOTO_API_TOKEN", "")
+ENV_API_KEY = os.getenv("MAKIMOTO_API_KEY", "")
 ENV_SAMPLE_DIR = Path(os.getenv("MAKIMOTO_SAMPLE_DIR", str(DEFAULT_SAMPLE_DIR))).expanduser()
 
 # How many jobs one page of the rail holds.
@@ -87,8 +87,8 @@ FETCH_PAGE_SIZE = 100
 # curl builders  (documentation that doubles as copy-paste shell commands)
 # --------------------------------------------------------------------------- #
 #
-# The token is never written into these snippets; they reference the
-# $MAKIMOTO_API_TOKEN environment variable so a copied command stays safe to
+# The key is never written into these snippets; they reference the
+# $MAKIMOTO_API_KEY environment variable so a copied command stays safe to
 # paste into a terminal or commit to a script.
 
 
@@ -107,7 +107,7 @@ def curl_list(api_url: str, *, limit: int | None = None, cursor: str | None = No
     return (
         "curl -sS \\\n"
         f"  {_shell_quote(url)} \\\n"
-        '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN"'
+        '  -H "Authorization: Bearer $MAKIMOTO_API_KEY"'
     )
 
 
@@ -115,7 +115,7 @@ def curl_create(api_url: str, file_path: str, language: str, metadata: str) -> s
     lines = [
         "curl -sS -X POST \\",
         f"  {_shell_quote(api_url.rstrip('/') + '/v1/transcriptions')} \\",
-        '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN" \\',
+        '  -H "Authorization: Bearer $MAKIMOTO_API_KEY" \\',
         f"  -F {_shell_quote('file=@' + (file_path or '/path/to/audio.mp3'))} \\",
     ]
     if (language or "").strip():
@@ -133,7 +133,7 @@ def curl_get(api_url: str, job_id: str) -> str:
     return (
         "curl -sS \\\n"
         f"  {_shell_quote(api_url.rstrip('/') + '/v1/transcriptions/' + (job_id or '<job_id>'))} \\\n"
-        '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN"'
+        '  -H "Authorization: Bearer $MAKIMOTO_API_KEY"'
     )
 
 
@@ -141,7 +141,7 @@ def curl_delete(api_url: str, job_id: str) -> str:
     return (
         "curl -sS -X DELETE \\\n"
         f"  {_shell_quote(api_url.rstrip('/') + '/v1/transcriptions/' + (job_id or '<job_id>'))} \\\n"
-        '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN"'
+        '  -H "Authorization: Bearer $MAKIMOTO_API_KEY"'
     )
 
 
@@ -152,7 +152,7 @@ def curl_postprocess(api_url: str, dimension: str, source_job_id: str) -> str:
     return (
         "curl -sS -X POST \\\n"
         f"  {_shell_quote(api_url.rstrip('/') + path)} \\\n"
-        '  -H "Authorization: Bearer $MAKIMOTO_API_TOKEN" \\\n'
+        '  -H "Authorization: Bearer $MAKIMOTO_API_KEY" \\\n'
         "  -H 'Content-Type: application/json' \\\n"
         f"  -d {_shell_quote(body)}"
     )
@@ -652,7 +652,7 @@ def signed_in_html(token: str) -> str:
     """The 'Connected as …' line shown under the masthead."""
     token = (token or "").strip()
     if not token:
-        return '<div class="mk-subtle">Not connected. Add a token under Connection to begin.</div>'
+        return '<div class="mk-subtle">Not connected. Add an API key under Connection to begin.</div>'
     payload = _decode_jwt(token)
     if payload:
         who = payload.get("email") or payload.get("username") or payload.get("sub") or "your account"
@@ -805,7 +805,7 @@ def metrics_html(job: Job) -> str:
 
 
 def _client(token: str, api_url: str) -> KawaClient:
-    return KawaClient(token=token, api_url=api_url)
+    return KawaClient(key=token, api_url=api_url)
 
 
 def on_audio_change(file_path: str | None, api_url: str, language: str, metadata: str) -> tuple[str, str]:
@@ -843,7 +843,7 @@ def transcribe(
     empty: list[dict[str, str]] = []
     collapsed, expanded = gr.update(open=False), gr.update(open=True)
     if not (token or "").strip():
-        yield status_pill("Add your API token under Connection to sign in.", "bad"), empty, "", "", "", collapsed
+        yield status_pill("Add your API key under Connection to sign in.", "bad"), empty, "", "", "", collapsed
         return
     if not file_path:
         yield status_pill("Choose a sample or upload a recording first.", "bad"), empty, "", "", "", collapsed
@@ -909,7 +909,7 @@ def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     it resolves the type properly.
     """
     try:
-        return job_id, KawaClient(token=token, api_url=api_url).get_transcription(job_id).type
+        return job_id, KawaClient(key=token, api_url=api_url).get_transcription(job_id).type
     except (KawaError, requests.RequestException, ValueError):
         return job_id, "unknown"
 
@@ -997,7 +997,7 @@ def list_jobs_view(
     if not (token or "").strip():
         return (
             [], types,
-            status_pill("Add a token under Connection to begin.", "bad"),
+            status_pill("Add an API key under Connection to begin.", "bad"),
             curl_list(api_url), None, gr.update(visible=False), 0,
         )
     try:
@@ -1229,7 +1229,7 @@ def open_job(job_id: str, token: str, api_url: str, pairs: dict[str, Any]) -> tu
     if not job_id:
         return _detail(status=status_pill("Pick a job from the list.", ""), **curls)
     if not (token or "").strip():
-        return _detail(status=status_pill("Add a token under Connection to sign in.", "bad"), **curls)
+        return _detail(status=status_pill("Add an API key under Connection to sign in.", "bad"), **curls)
 
     client = _client(token, api_url)
     try:
@@ -1345,7 +1345,7 @@ def run_postprocess(
 
     source_job_id = (source_job_id or "").strip()
     if not (token or "").strip():
-        yield emit(status_pill("Add your API token under Connection to sign in.", "bad"))
+        yield emit(status_pill("Add your API key under Connection to sign in.", "bad"))
         return
     if not source_job_id:
         yield emit(status_pill("Open a transcription first.", "bad"))
@@ -1438,14 +1438,14 @@ def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
 
 
 def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str, None, Any, int]:
-    """Clear the token and reset the playground.
+    """Clear the API key and reset the playground.
 
     The recorded pairings are left alone: they are job ids this browser
     produced, not credentials, and they are what makes a summary's source
     traceable after signing back in.
     """
     return (
-        "",                                     # token box
+        "",                                     # token box (holds the API key)
         signed_in_html(""),                     # connection line
         [],                                     # job rail
         {},                                     # resolved-type cache
@@ -1535,17 +1535,17 @@ def build_app() -> gr.Blocks:
             disconnect_btn = gr.Button("Disconnect", variant="secondary", scale=0, min_width=120)
 
         gr.HTML('<div class="mk-title">Playground</div>')
-        signed_in = gr.HTML(signed_in_html(ENV_TOKEN))
+        signed_in = gr.HTML(signed_in_html(ENV_API_KEY))
 
-        # -- Connection (collapsed once a token is present) --------------- #
-        with gr.Accordion("Connection", open=not bool(ENV_TOKEN)):
+        # -- Connection (collapsed once an API key is present) ------------ #
+        with gr.Accordion("Connection", open=not bool(ENV_API_KEY)):
             with gr.Row():
                 token_box = gr.Textbox(
-                    label="API token",
-                    value=ENV_TOKEN,
+                    label="API key",
+                    value=ENV_API_KEY,
                     type="password",
                     scale=3,
-                    placeholder="Bearer token from the Makimoto dashboard",
+                    placeholder="API key from the Makimoto dashboard",
                     info="Sent as 'Authorization: Bearer …'. Kept only in this browser session.",
                 )
                 api_url_box = gr.Textbox(
@@ -1554,8 +1554,8 @@ def build_app() -> gr.Blocks:
                     scale=2,
                 )
             gr.Markdown(
-                "Generate a token in the [dashboard](https://makimoto.ai), or `export "
-                "MAKIMOTO_API_TOKEN=…` to preload it. A `401` from the API means the token "
+                "Generate an API key in the [dashboard](https://makimoto.ai), or `export "
+                "MAKIMOTO_API_KEY=…` to preload it. A `401` from the API means the key "
                 "is missing, expired, or revoked.",
                 elem_classes=["mk-hint"],
             )

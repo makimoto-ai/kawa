@@ -1,6 +1,6 @@
 # Quickstart — transcribe without the UI
 
-[`quickstart.py`](quickstart.py) is the shortest path from an API token to text:
+[`quickstart.py`](quickstart.py) is the shortest path from an API key to text:
 ~40 lines, no Gradio, no browser. It uses the same
 [`kawa_client.py`](kawa_client.py) reference client as the playground to submit a
 recording, poll until done, and print the transcript.
@@ -12,7 +12,7 @@ Requires Python 3.10 or newer and `requests` (installing
 
 ```bash
 cd demo
-export MAKIMOTO_API_TOKEN="<token-from-dashboard>"
+export MAKIMOTO_API_KEY="<api-key-from-dashboard>"
 python quickstart.py                       # uses a bundled sample (jackhammer.wav)
 python quickstart.py /path/to/audio.mp3    # or your own recording
 ```
@@ -37,7 +37,7 @@ Language: en   Words: 27
 ...
 ```
 
-A non-zero exit code means it stopped early: no token set, an API error (the
+A non-zero exit code means it stopped early: no key set, an API error (the
 status code and message are printed), or a job that did not reach `succeeded`.
 
 ## Next step

@@ -28,8 +28,8 @@ python app.py
 
 Open the local URL it prints. By default the app finds a free port; set
 `GRADIO_SERVER_PORT` to pin one, or `GRADIO_SERVER_NAME=0.0.0.0` to bind all
-interfaces. Then add a token in the **Connection** panel (or preload it with
-`MAKIMOTO_API_TOKEN`, see [Configuration](#configuration)) and submit a sample.
+interfaces. Then add an API key in the **Connection** panel (or preload it with
+`MAKIMOTO_API_KEY`, see [Configuration](#configuration)) and submit a sample.
 
 ## What it does
 
@@ -62,18 +62,18 @@ If a summary or tags job originates from a transcription, it is linked back to i
 source transcription, so you can always trace a result to where it came from. 
 
 Every action shows the exact `curl` equivalent with a copy button, and the raw
-JSON response is one accordion away. The token is referenced as
-`$MAKIMOTO_API_TOKEN` in the snippets, never inlined.
+JSON response is one accordion away. The key is referenced as
+`$MAKIMOTO_API_KEY` in the snippets, never inlined.
 
 ## Configuration
 
 ```bash
 export MAKIMOTO_API_URL="https://api.makimoto.ai"   # production default
-export MAKIMOTO_API_TOKEN="<token-from-dashboard>"  # preloads the token field
+export MAKIMOTO_API_KEY="<api-key-from-dashboard>"  # preloads the API key field
 export MAKIMOTO_SAMPLE_DIR="../samples-audio"        # optional sample override
 ```
 
-The token is held only in the local browser session; it is never written to
+The key is held only in the local browser session; it is never written to
 this repository. You can also paste it into the **Connection** panel at runtime.
 
 ## Using `KawaClient`
@@ -93,14 +93,14 @@ POST   /v1/summarize                 -> summarise a finished transcription
 POST   /v1/tag                       -> tag a finished transcription
 ```
 
-Construct it with a token and (optionally) a base URL:
+Construct it with an API key and (optionally) a base URL:
 
 ```python
 from kawa_client import KawaClient
 
-client = KawaClient(token="<dashboard-token>")
+client = KawaClient(key="<api-key-from-dashboard>")
 # or point at a non-production deployment:
-# client = KawaClient(token="<token>", api_url="https://api.eu.makimoto.ai")
+# client = KawaClient(key="<api-key>", api_url="https://api.eu.makimoto.ai")
 ```
 
 ### Submit a recording and read the transcript
@@ -143,8 +143,12 @@ If you would rather block until done than stream updates, exhaust the iterator:
 
 ### List, fetch, and delete jobs
 
+`list_transcriptions` returns one page at a time as a `JobPage` (`.jobs` plus
+`.next_cursor`), since the endpoint is cursor-paginated; `list_all_transcriptions`
+walks every page for you when you just want the full set:
+
 ```python
-for job in client.list_transcriptions():
+for job in client.list_all_transcriptions():
     print(job.job_id, job.status)
 
 job = client.get_transcription("00000000-0000-0000-0000-000000000000")
@@ -217,8 +221,8 @@ Three refusals are worth branching on, all raised as `KawaError`:
 `job.source_job_id` is the transcription a summary or tags job was derived
 from, as reported by the API. It is `None` on a transcription, and on a
 postprocessing job created before the API began recording it. Note too that
-`list_transcriptions()` returns all three types and reports neither `type` nor
-`source_job_id`; postprocessing jobs list without a filename.
+`list_transcriptions()` returns all three types and reports `type` for each,
+but not `source_job_id`; postprocessing jobs list without a filename.
 
 ### Handling errors
 
@@ -232,7 +236,7 @@ try:
     job = client.get_transcription(job_id)
 except KawaError as exc:
     if exc.status_code == 401:
-        ...   # token missing, expired, or revoked
+        ...   # API key missing, expired, or revoked
     elif exc.status_code == 404:
         ...   # unknown job
     else:
@@ -241,17 +245,17 @@ except KawaError as exc:
 
 ## Authentication
 
-Authenticate every request with a token generated from the Makimoto dashboard:
+Authenticate every request with an API key created from the Makimoto dashboard:
 
 ```http
-Authorization: Bearer <makimoto_api_token>
+Authorization: Bearer <makimoto_api_key>
 ```
 
-There is no client-side refresh. If the dashboard issues an opaque key, rotate
-it in the dashboard. If it issues a short-lived JWT, copy a fresh one when it
-expires — the Connection panel decodes and shows JWT expiry locally so you can
-spot a stale token. A `401` from the API means the token is missing, expired,
-or revoked.
+The key doesn't expire on its own unless you set an expiry when creating it,
+so there's no client-side refresh to handle: it keeps working until you
+revoke it in the dashboard. You can hold up to 3 active keys at a time, so a
+new one can overlap with an old one during rotation. A `401` from the API
+means the key is missing, invalid, expired, or revoked.
 
 See [../docs/service/authentication.md](../docs/service/authentication.md)
 for the full HTTP contract.
