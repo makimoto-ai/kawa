@@ -12,13 +12,13 @@ the transcript.
     POST   /v1/summarize                 -> summarise a finished transcription
     POST   /v1/tag                       -> tag a finished transcription
 
-Authenticate every request with a dashboard token:
+Authenticate every request with an API key, created from the dashboard:
 
-    Authorization: Bearer <makimoto_api_token>
+    Authorization: Bearer <makimoto_api_key>
 
 Example
 -------
->>> client = KawaClient(token="<dashboard-token>")
+>>> client = KawaClient(key="<api-key-from-dashboard>")
 >>> job = client.create_transcription("call.mp3", language="en")
 >>> *_, final = client.poll(job.job_id)
 >>> if final.status == "succeeded":
@@ -57,7 +57,7 @@ class KawaError(RuntimeError):
     """Raised when the API returns a non-2xx response.
 
     ``status_code``, ``body`` and ``headers`` are kept so callers can branch on,
-    for example, a 401 (token missing/expired) versus a 404 (unknown job), and
+    for example, a 401 (key missing/expired) versus a 404 (unknown job), and
     inspect response headers (such as ``Retry-After`` on a 429, or the ``Server``
     header that reveals whether a 413 came from the API or a proxy in front of it).
     """
@@ -196,8 +196,8 @@ class Job:
     def type(self) -> str:
         """``transcription``, ``summary`` or ``tags``.
 
-        The list endpoint does not carry ``type``, only the single-job GET
-        does, so default to ``transcription`` when it is absent.
+        Reported by both the list endpoint and the single-job GET; defaults to
+        ``transcription`` on a row from a deployment that predates the field.
         """
         return str(self.raw.get("type") or "transcription")
 
@@ -252,7 +252,7 @@ class KawaClient:
 
     Example
     -------
-    >>> client = KawaClient(token="<dashboard-token>")
+    >>> client = KawaClient(key="<api-key-from-dashboard>")
     >>> job = client.create_transcription("call.mp3", language="en")
     >>> *_, final = client.poll(job.job_id)
     >>> print(final.result.full_text)
@@ -260,13 +260,13 @@ class KawaClient:
 
     def __init__(
         self,
-        token: str,
+        key: str,
         api_url: str = DEFAULT_API_URL,
         *,
         timeout: float = 30.0,
         session: requests.Session | None = None,
     ):
-        self.token = (token or "").strip()
+        self.key = (key or "").strip()
         self.api_url = (api_url or DEFAULT_API_URL).rstrip("/")
         self.timeout = timeout
         self._session = session or requests.Session()
@@ -280,9 +280,9 @@ class KawaClient:
         return f"{self.api_url}{path}"
 
     def _headers(self) -> dict[str, str]:
-        if not self.token:
-            raise ValueError("A Makimoto API token is required.")
-        return {"Authorization": f"Bearer {self.token}"}
+        if not self.key:
+            raise ValueError("A Makimoto API key is required.")
+        return {"Authorization": f"Bearer {self.key}"}
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         # Upload streams the file, so allow a longer timeout for POST.

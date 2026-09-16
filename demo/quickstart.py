@@ -1,9 +1,9 @@
 """Minimal end-to-end example of the Makimoto Kawa transcription API.
 
 No Gradio, no UI: construct the client, submit a recording, poll until done,
-then print the transcript. This is the shortest path from a token to text.
+then print the transcript. This is the shortest path from an API key to text.
 
-    export MAKIMOTO_API_TOKEN="<token-from-dashboard>"
+    export MAKIMOTO_API_KEY="<api-key-from-dashboard>"
     python quickstart.py                       # uses a bundled sample
     python quickstart.py /path/to/audio.mp3    # or your own recording
 """
@@ -19,14 +19,14 @@ DEFAULT_AUDIO = "../samples-audio/jackhammer.wav"
 
 
 def main() -> int:
-    token = os.getenv("MAKIMOTO_API_TOKEN", "").strip()
+    token = os.getenv("MAKIMOTO_API_KEY", "").strip()
     if not token:
-        print("Set MAKIMOTO_API_TOKEN to a token from the Makimoto dashboard.")
+        print("Set MAKIMOTO_API_KEY to an API key from the Makimoto dashboard.")
         return 1
 
     audio = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_AUDIO
     api_url = os.getenv("MAKIMOTO_API_URL", "https://api.makimoto.ai")
-    client = KawaClient(token=token, api_url=api_url)
+    client = KawaClient(key=token, api_url=api_url)
 
     try:
         job = client.create_transcription(audio, language="en")
