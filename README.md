@@ -24,7 +24,7 @@
 ## 🚀 Get started
 
 1. **Create an account** at [makimoto.ai](https://makimoto.ai). Every account includes a **free monthly allowance of 1,000 minutes**.
-2. **Generate an API token** from the dashboard.
+2. **Generate an API key** from the dashboard.
 3. **Try it**, two ways:
    - 🖥️ **In your browser** with the [playground](demo): pick a sample, submit, read the transcript.
    - 🐍 **In code** with the [Python SDK](https://github.com/makimoto-ai/makimoto-python) (`pip install makimoto-kawa`), the [`quickstart.py`](demo/quickstart.py) script, or the bundled [`KawaClient`](demo/kawa_client.py) reference client.
@@ -42,7 +42,7 @@ pip install makimoto-kawa
 ```python
 from makimoto import kawa
 
-client = kawa.KawaClient(token="<dashboard-token>")   # or set MAKIMOTO_API_TOKEN instead
+client = kawa.KawaClient(api_key="<your api key>")   # or set MAKIMOTO_API_KEY instead
 
 job = client.transcribe("call.mp3", language="en")
 
@@ -70,16 +70,18 @@ Run instructions in [demo/README.md](demo/README.md), the [`KawaClient` referenc
 
 ## 📡 The API
 
-Submit a recording, poll the job, then read the transcript with speaker separation and segment-level timestamps.
+Submit a recording, poll the job, then read the transcript with speaker separation and segment-level timestamps. A succeeded transcription can also be summarised or tagged, or you can skip transcription entirely and post plain text straight to either.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `POST` | `/v1/transcriptions` | Submit audio (multipart); returns a job id |
-| `GET` | `/v1/transcriptions` | List your jobs |
-| `GET` | `/v1/transcriptions/{job_id}` | Job status, and the transcript once done |
+| `GET` | `/v1/transcriptions` | List your jobs, paginated and filterable |
+| `GET` | `/v1/transcriptions/{job_id}` | Job status, and the result once done |
 | `DELETE` | `/v1/transcriptions/{job_id}` | Remove a job (where supported) |
+| `POST` | `/v1/summarize` | Summarise a transcription or plain text; returns a new job id |
+| `POST` | `/v1/tag` | Tag a transcription or plain text; returns a new job id |
 
-Authenticate every request with `Authorization: Bearer <token>`. Full HTTP contract in [docs/service/authentication.md](docs/service/authentication.md); OpenAPI spec in [docs/openapi.json](docs/openapi.json).
+Authenticate every request with `Authorization: Bearer <api-key>`. Full HTTP contract in [docs/service/authentication.md](docs/service/authentication.md); OpenAPI spec in [docs/openapi.json](docs/openapi.json).
 
 ## 🧩 How it works
 

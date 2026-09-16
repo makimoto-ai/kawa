@@ -3,7 +3,7 @@
   "info": {
     "title": "Makimoto Transcription API",
     "version": "1.0.0",
-    "description": "Batched, server-side audio transcription. Upload an audio file, poll the job, and fetch the transcript once it is ready."
+    "description": "Batched, server-side audio transcription, with optional summarisation and tagging of a finished transcript. Upload an audio file, poll the job, and fetch the transcript once it is ready; derive a summary or tag set from any succeeded transcription the same way."
   },
   "servers": [
     {
@@ -20,6 +20,10 @@
     {
       "name": "Transcriptions",
       "description": "Create and manage transcription jobs."
+    },
+    {
+      "name": "Postprocessing",
+      "description": "Derive a summary or tag set from a finished transcription."
     }
   ],
   "paths": {
@@ -73,7 +77,7 @@
             }
           },
           "400": {
-            "description": "No audio file provided, or `metadata` is not valid JSON.",
+            "description": "No audio file provided (`AUDIO_FILE_MISSING`), the audio's duration couldn't be determined (`AUDIO_DURATION_UNKNOWN`), or `metadata` is not valid JSON (`INVALID_METADATA_JSON`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -86,7 +90,7 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "413": {
-            "description": "File exceeds the 10 MB limit.",
+            "description": "File exceeds the 10 MB limit (`FILE_TOO_LARGE`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -96,7 +100,7 @@
             }
           },
           "415": {
-            "description": "Unsupported audio format. Only MP3 and WAV are accepted.",
+            "description": "Unsupported audio format. Only MP3 and WAV are accepted (`UNSUPPORTED_AUDIO_FORMAT`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -105,8 +109,8 @@
               }
             }
           },
-          "502": {
-            "description": "The job was stored but submission to the transcription pipeline failed. The job is marked `failed`.",
+          "429": {
+            "description": "This upload would push the account over its monthly transcription-minute quota (`QUOTA_EXCEEDED`). `error.details` carries `limit_minutes`, `used_minutes`, and `file_minutes`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -117,6 +121,16 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalError"
+          },
+          "502": {
+            "description": "The job was stored but submission to the transcription pipeline failed (`PROVIDER_SUBMIT_FAILED`). The job is marked `failed`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -125,8 +139,80 @@
           "Transcriptions"
         ],
         "summary": "List the caller's transcription jobs",
-        "description": "Returns the caller's jobs, most recent first.",
+        "description": "Returns the caller's jobs, most recent first, mixing transcriptions with any `summary` or `tags` jobs derived from them. Supports pagination (`limit`/`cursor`) and filtering by `status`, `type`, `language`, `created_after`, and `job_id`, which compose with AND when combined. The cursor only encodes position, not which filters were active, so resend the same filter params on every paginated request or the result set can shift partway through.",
         "operationId": "listTranscriptions",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Max jobs to return. Default 10, max 100 (values above 100 are silently capped, not rejected).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque pagination cursor from a previous response's `next_cursor`. Omit for the first page. Not meant to be constructed or decoded by clients; its internal shape may change.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Only return jobs with this status.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/JobStatus"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Only return jobs of this type.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/JobType"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "Only return jobs with this exact language value.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "en"
+            }
+          },
+          {
+            "name": "created_after",
+            "in": "query",
+            "description": "Only return jobs created after this ISO 8601 timestamp.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2026-06-01T00:00:00Z"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "query",
+            "description": "Only return the job with this exact ID. An exact match, not a search; a malformed UUID is rejected with 400.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "List of the caller's jobs.",
@@ -134,6 +220,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TranscriptionList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`limit` isn't a positive integer or `cursor` is malformed (`INVALID_PAGINATION`), or `status`/`type`/`job_id`/`created_after` fails validation (`INVALID_FILTER`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -153,8 +249,13 @@
           "Transcriptions"
         ],
         "summary": "Get the caller's transcription usage",
-        "description": "Returns the caller's transcription minute quota: total limit, minutes already consumed, and minutes remaining. Reflects the same quota state enforced on upload.",
+        "description": "Returns the caller's transcription minute quota: total limit, minutes already consumed, and minutes remaining. Reflects the same quota state enforced on upload.\n\nUnlike every other operation in this API, this one is authenticated with the caller's dashboard sign-in session (see `dashboardAuth`), not an API key: it's a status view for the logged-in dashboard, not part of the API-key surface external clients use.",
         "operationId": "getTranscriptionUsage",
+        "security": [
+          {
+            "dashboardAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "The caller's quota state.",
@@ -167,7 +268,14 @@
             }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "Missing or invalid dashboard session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "500": {
             "$ref": "#/components/responses/InternalError"
@@ -185,8 +293,8 @@
         "tags": [
           "Transcriptions"
         ],
-        "summary": "Get a transcription job",
-        "description": "Returns the job status. When `succeeded`, the `result` block is included; when `failed`, the `error` block is included.",
+        "summary": "Get a job",
+        "description": "Returns the specified job's status. Serves all three job kinds: a transcription, and the `summary`/`tags` jobs derived from one via `POST /v1/summarize` and `POST /v1/tag`. When `succeeded`, the `result` block is included, shaped according to `type`; when `failed`, the `error` block is included.",
         "operationId": "getTranscription",
         "responses": {
           "200": {
@@ -195,6 +303,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetTranscriptionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No `job_id` in the path (`MISSING_JOB_ID`). Not reachable through a normal request to this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -222,7 +340,33 @@
         "operationId": "deleteTranscription",
         "responses": {
           "202": {
-            "description": "Deletion accepted. Empty body."
+            "description": "Deletion accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "requestId"
+                  ],
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "description": "The only field in the body; there is no other confirmation payload."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No `job_id` in the path (`MISSING_JOB_ID`). Not reachable through a normal request to this route.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -238,6 +382,202 @@
           }
         }
       }
+    },
+    "/v1/summarize": {
+      "post": {
+        "tags": [
+          "Postprocessing"
+        ],
+        "summary": "Summarise a transcription",
+        "description": "Derives a topic and prose summary either from one of the caller's own transcription jobs, or from plain text supplied directly. No audio is involved and nothing is generated synchronously: the call returns a new `summary` job immediately, polled the same way as a transcription via `GET /v1/transcriptions/{job_id}`.",
+        "operationId": "createSummary",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostprocessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePostprocessingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body isn't valid JSON (`INVALID_JSON_BODY`), no transcript source was given (`MISSING_TRANSCRIPT_SOURCE`), both `transcription_job_id` and `transcript_text` were given (`MULTIPLE_TRANSCRIPT_SOURCES`), or `transcription_job_id` refers to a `summary` or `tags` job, not a transcription (`NOT_A_TRANSCRIPTION`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`transcription_job_id` belongs to a different caller (`FORBIDDEN`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`transcription_job_id` doesn't exist (`JOB_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The source transcription exists but has not yet succeeded (`TRANSCRIPTION_NOT_READY`). Only applies to the `transcription_job_id` path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The source transcription succeeded, but there was no speech to summarise (`TRANSCRIPT_EMPTY`). Only applies to the `transcription_job_id` path; empty or whitespace-only `transcript_text` is treated as not provided at all (`400 MISSING_TRANSCRIPT_SOURCE`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "502": {
+            "description": "The job was stored but submission to the summarisation provider failed (`PROVIDER_SUBMIT_FAILED`). The job is marked `failed`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tag": {
+      "post": {
+        "tags": [
+          "Postprocessing"
+        ],
+        "summary": "Tag a transcription",
+        "description": "Same contract as `POST /v1/summarize`, including the `transcription_job_id` / `transcript_text` choice, except the derived job's `type` is `tags`, and its `result.tags` maps each category in the pipeline's fixed taxonomy (`call_reason`, `customer_sentiment`, ...) to the values selected for this transcript.",
+        "operationId": "createTags",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostprocessingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatePostprocessingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body isn't valid JSON (`INVALID_JSON_BODY`), no transcript source was given (`MISSING_TRANSCRIPT_SOURCE`), both `transcription_job_id` and `transcript_text` were given (`MULTIPLE_TRANSCRIPT_SOURCES`), or `transcription_job_id` refers to a `summary` or `tags` job, not a transcription (`NOT_A_TRANSCRIPTION`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`transcription_job_id` belongs to a different caller (`FORBIDDEN`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`transcription_job_id` doesn't exist (`JOB_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The source transcription exists but has not yet succeeded (`TRANSCRIPTION_NOT_READY`). Only applies to the `transcription_job_id` path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The source transcription succeeded, but there was no speech to tag (`TRANSCRIPT_EMPTY`). Only applies to the `transcription_job_id` path; empty or whitespace-only `transcript_text` is treated as not provided at all (`400 MISSING_TRANSCRIPT_SOURCE`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "502": {
+            "description": "The job was stored but submission to the tagging provider failed (`PROVIDER_SUBMIT_FAILED`). The job is marked `failed`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -245,8 +585,14 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
+        "bearerFormat": "API Key",
+        "description": "API key authentication.\n\nCreate a key from the Makimoto dashboard at https://makimoto.ai and send it as `Authorization: Bearer <key>`. This is an opaque `mkm_sk_...` key, not a short-lived session token: it keeps working until you revoke it or an expiry you set at creation passes, so there is nothing to refresh. You can hold up to 3 active keys at a time, so a new one can overlap with an old one during rotation. A `401` means the key is missing, invalid, expired, or revoked."
+      },
+      "dashboardAuth": {
+        "type": "http",
+        "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "Bearer token authentication.\n\nDuring the beta, retrieve a token from the Makimoto dashboard at https://makimoto.ai and send it as `Authorization: Bearer <token>`. Beta tokens are short-lived: while you are signed in the dashboard keeps your token current, and a token copied elsewhere does not refresh itself, so generate a fresh one when it expires. A `401` means the token is missing, expired, or revoked.\n\nFor production use, contact us at contact@makimoto.ai for persistent credentials (such as an API key or other service authentication) and higher volume limits."
+        "description": "Your Makimoto dashboard sign-in session, not an API key. Used only by `GET /v1/transcriptions/usage` to power the logged-in dashboard's own quota display; not intended for external API clients, which authenticate everywhere else in this API with an API key (see `bearerAuth`). An API key gets `401` here."
       }
     },
     "parameters": {
@@ -263,7 +609,7 @@
     },
     "responses": {
       "Unauthorized": {
-        "description": "Missing or invalid bearer token.",
+        "description": "Missing or invalid API key.",
         "content": {
           "application/json": {
             "schema": {
@@ -409,7 +755,8 @@
         "required": [
           "job_id",
           "status",
-          "received_at"
+          "received_at",
+          "requestId"
         ],
         "properties": {
           "job_id": {
@@ -422,19 +769,33 @@
           "received_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
           }
         },
         "example": {
           "job_id": "12cd73fe-182c-4040-a9d5-55b676d6e1c3",
           "status": "processing",
-          "received_at": "2026-06-11T19:13:22.366Z"
+          "received_at": "2026-06-11T19:13:22.366Z",
+          "requestId": "a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7"
         }
+      },
+      "JobType": {
+        "type": "string",
+        "enum": [
+          "transcription",
+          "summary",
+          "tags"
+        ],
+        "description": "What kind of job this is, and therefore how `result` is shaped. Absent on jobs created before this field existed; treat a missing value as `transcription`."
       },
       "GetTranscriptionResponse": {
         "type": "object",
         "required": [
           "job_id",
-          "status"
+          "status",
+          "requestId"
         ],
         "properties": {
           "job_id": {
@@ -444,21 +805,146 @@
           "status": {
             "$ref": "#/components/schemas/JobStatus"
           },
+          "type": {
+            "$ref": "#/components/schemas/JobType"
+          },
+          "source_job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "For a `summary` or `tags` job, the `job_id` of the transcription it was derived from. Omitted entirely (not present, not `null`) on a transcription, and on a postprocessing job created before the API began recording the pairing."
+          },
           "result": {
-            "$ref": "#/components/schemas/TranscriptionResult"
+            "description": "Present when `status` is `succeeded`. Shape depends on `type`.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TranscriptionResult"
+              },
+              {
+                "$ref": "#/components/schemas/SummaryResult"
+              },
+              {
+                "$ref": "#/components/schemas/TagsResult"
+              }
+            ]
           },
           "error": {
             "$ref": "#/components/schemas/JobError"
+          },
+          "requestId": {
+            "type": "string"
           }
+        }
+      },
+      "SummaryResult": {
+        "type": "object",
+        "required": [
+          "topic",
+          "summary"
+        ],
+        "properties": {
+          "topic": {
+            "type": "string",
+            "nullable": true,
+            "description": "Short label for what the conversation was about, or `null`."
+          },
+          "summary": {
+            "type": "string",
+            "description": "Prose summary of the transcription."
+          },
+          "meta_data": {
+            "type": "object",
+            "nullable": true,
+            "description": "Optional free-form object echoed back by the pipeline."
+          }
+        }
+      },
+      "TagsResult": {
+        "type": "object",
+        "required": [
+          "tags"
+        ],
+        "properties": {
+          "tags": {
+            "type": "object",
+            "description": "Maps a fixed, lower_snake_case category (`call_reason`, `customer_sentiment`, ...) to the array of values selected for it. The taxonomy is fixed by the service, not configurable per account.",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "meta_data": {
+            "type": "object",
+            "nullable": true,
+            "description": "Optional free-form object echoed back by the pipeline."
+          }
+        }
+      },
+      "PostprocessingRequest": {
+        "type": "object",
+        "description": "Exactly one of `transcription_job_id` or `transcript_text` must be given.",
+        "properties": {
+          "transcription_job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "`job_id` of a transcription job in status `succeeded`."
+          },
+          "transcript_text": {
+            "type": "string",
+            "description": "A transcript supplied directly as plain text, with no transcription job behind it."
+          }
+        },
+        "example": {
+          "transcription_job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90"
+        }
+      },
+      "CreatePostprocessingResponse": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "type",
+          "status",
+          "received_at",
+          "requestId"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identifies the new `summary` or `tags` job. Poll this id, not `transcription_job_id`."
+          },
+          "type": {
+            "$ref": "#/components/schemas/JobType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestId": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "job_id": "7e2b1a3c-4f5d-4e6a-9b8c-1d2e3f4a5b6c",
+          "type": "summary",
+          "status": "queued",
+          "received_at": "2026-09-15T03:00:00.000Z",
+          "requestId": "c9d0e1f2-a3b4-4567-c8d9-e0f1a2b3c4d5"
         }
       },
       "TranscriptionListItem": {
         "type": "object",
         "required": [
           "job_id",
+          "type",
           "status",
           "original_filename",
           "language",
+          "audio_seconds",
           "created_at",
           "updated_at"
         ],
@@ -467,15 +953,24 @@
             "type": "string",
             "format": "uuid"
           },
+          "type": {
+            "$ref": "#/components/schemas/JobType"
+          },
           "status": {
             "$ref": "#/components/schemas/JobStatus"
           },
           "original_filename": {
-            "type": "string"
+            "type": "string",
+            "nullable": true,
+            "description": "`null` when the job's upload hasn't been attached yet."
           },
           "language": {
             "type": "string",
             "nullable": true
+          },
+          "audio_seconds": {
+            "type": "integer",
+            "description": "Audio duration in seconds. `0` for a `summary` or `tags` job, whose seconds were already metered by the transcription it was derived from."
           },
           "created_at": {
             "type": "string",
@@ -490,7 +985,9 @@
       "TranscriptionList": {
         "type": "object",
         "required": [
-          "transcriptions"
+          "transcriptions",
+          "next_cursor",
+          "requestId"
         ],
         "properties": {
           "transcriptions": {
@@ -498,6 +995,14 @@
             "items": {
               "$ref": "#/components/schemas/TranscriptionListItem"
             }
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Opaque cursor for the next page, or `null` if this is the last page."
+          },
+          "requestId": {
+            "type": "string"
           }
         }
       },
@@ -506,7 +1011,8 @@
         "required": [
           "limit_minutes",
           "used_minutes",
-          "remaining_minutes"
+          "remaining_minutes",
+          "requestId"
         ],
         "properties": {
           "limit_minutes": {
@@ -523,18 +1029,70 @@
             "type": "number",
             "description": "Minutes still available.",
             "example": 987.5
+          },
+          "requestId": {
+            "type": "string"
           }
         }
       },
       "Error": {
         "type": "object",
+        "description": "The error envelope returned by every non-2xx response in this API: a machine-readable `code`, a human-readable `message`, optionally `details`, and the same `requestId` a successful response carries.",
         "required": [
-          "error"
+          "error",
+          "requestId"
         ],
         "properties": {
           "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "AUDIO_FILE_MISSING",
+                  "AUDIO_DURATION_UNKNOWN",
+                  "INVALID_METADATA_JSON",
+                  "FILE_TOO_LARGE",
+                  "UNSUPPORTED_AUDIO_FORMAT",
+                  "QUOTA_EXCEEDED",
+                  "MISSING_JOB_ID",
+                  "JOB_NOT_FOUND",
+                  "FORBIDDEN",
+                  "INVALID_PAGINATION",
+                  "INVALID_FILTER",
+                  "INVALID_JSON_BODY",
+                  "MISSING_TRANSCRIPT_SOURCE",
+                  "MULTIPLE_TRANSCRIPT_SOURCES",
+                  "NOT_A_TRANSCRIPTION",
+                  "TRANSCRIPTION_NOT_READY",
+                  "TRANSCRIPT_EMPTY",
+                  "PROVIDER_SUBMIT_FAILED",
+                  "INTERNAL_ERROR"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "description": "Extra machine-readable context, present on some errors (e.g. `limit_minutes`/`used_minutes`/`file_minutes` on `QUOTA_EXCEEDED`)."
+              }
+            }
+          },
+          "requestId": {
             "type": "string"
           }
+        },
+        "example": {
+          "error": {
+            "code": "TRANSCRIPTION_NOT_READY",
+            "message": "Transcription is still processing."
+          },
+          "requestId": "b8c9d0e1-f2a3-4456-b7c8-d9e0f1a2b3c4"
         }
       }
     }

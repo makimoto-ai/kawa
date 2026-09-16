@@ -1,6 +1,6 @@
 # Getting Started
 
-*Last updated: 2026-08-26*
+*Last updated: 2026-09-16*
 
 This page gets you from no account to a finished transcript. Use this as a quickstart to get familiar with the API and services. 
 
@@ -8,9 +8,9 @@ This page gets you from no account to a finished transcript. Use this as a quick
 
 To begin, create an account at [makimoto.ai](https://makimoto.ai). Every account includes a free monthly allowance of 1,000 minutes of audio.
 
-## 2. Generate an API token
+## 2. Generate an API key
 
-Generate an API token from the developer/API section of the dashboard. See [Authentication](service/authentication.md) for how tokens work and how long they last.
+Create an API key from the developer/API section of the dashboard. See [Authentication](service/authentication.md) for how API keys work and how to rotate one.
 
 ## 3. Try it
 
@@ -29,6 +29,8 @@ In short:
 1. `POST /v1/transcriptions` with the audio file, to get a `job_id`.
 2. `GET /v1/transcriptions/{job_id}` every few seconds until `status` is `succeeded` or `failed`.
 3. Read the transcript from `result`, with speaker labels and segment-level timestamps.
+
+Once a transcription has succeeded, you can derive a summary or a tag set from it the same way: `POST /v1/summarize` or `POST /v1/tag`, then poll the job it returns. See [Summarise or Tag the Transcript](service/walkthrough.md#6-summarise-or-tag-the-transcript) in the Walkthrough.
 
 For every endpoint's full request/response detail, see the [API Reference](service/api-reference.md).
 
