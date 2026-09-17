@@ -1090,7 +1090,8 @@
         "example": {
           "error": {
             "code": "TRANSCRIPTION_NOT_READY",
-            "message": "Transcription is still processing."
+            "message": "The transcription has not succeeded yet.",
+            "details": { "status": "processing" }
           },
           "requestId": "b8c9d0e1-f2a3-4456-b7c8-d9e0f1a2b3c4"
         }
