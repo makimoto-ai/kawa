@@ -543,6 +543,7 @@ Every error response carries this same envelope: a machine-readable `code` and `
 Same contract as [`POST /v1/summarize`](#post-v1summarize) above, including the `transcription_job_id` / `transcript_text` choice, except the derived job's `type` is `tags`, and its `result.tags` maps each category in the pipeline's fixed taxonomy (`call_reason`, `call_outcome`, …) to the values selected for this transcript.
 
 ### Current Behaviour and Limitations
+
 The current tagging service is optimised for a two-party telephony conversation, in the context of a business-customer call. As such, the tags generated may reference terminology pertaining to this context. 
 
 Tagging customisation is in the works for a future release.
