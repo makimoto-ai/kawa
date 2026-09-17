@@ -421,6 +421,12 @@ Example `200` Response (`failed`):
 
 Derives a topic and prose summary either from one of your own transcription jobs, or from plain text supplied directly. No audio is involved and nothing is generated synchronously: the call returns a new `summary` job immediately, which you poll like any other job via [`GET /v1/transcriptions/{job_id}`](#get-v1transcriptionsjob_id).
 
+### Current Behaviour and Limitations
+
+The current summary feature has two caveats to take note of during use: 
+1. Sufficient context has to be provided to the summary in order for a summary to be generated. If the transcript provided is too short, the service may return an empty summmary instead. 
+2. The summary feature is optimised for a two-party telephony conversation; further behaviour customisation is in the works for a future release.
+
 ### Request Body (`application/json`)
 
 Provide **exactly one** of `transcription_job_id` or `transcript_text`.
@@ -535,6 +541,11 @@ Every error response carries this same envelope: a machine-readable `code` and `
 *Tag a transcription.*
 
 Same contract as [`POST /v1/summarize`](#post-v1summarize) above, including the `transcription_job_id` / `transcript_text` choice, except the derived job's `type` is `tags`, and its `result.tags` maps each category in the pipeline's fixed taxonomy (`call_reason`, `call_outcome`, …) to the values selected for this transcript.
+
+### Current Behaviour and Limitations
+The current tagging service is optimised for a two-party telephony conversation, in the context of a business-customer call. As such, the tags generated may reference terminology pertaining to this context. 
+
+Tagging customisation is in the works for a future release.
 
 ### Request Body (`application/json`)
 
