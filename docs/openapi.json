@@ -487,7 +487,7 @@
           "Postprocessing"
         ],
         "summary": "Tag a transcription",
-        "description": "Same contract as `POST /v1/summarize`, including the `transcription_job_id` / `transcript_text` choice, except the derived job's `type` is `tags`, and its `result.tags` maps each category in the pipeline's fixed taxonomy (`call_reason`, `customer_sentiment`, ...) to the values selected for this transcript.",
+        "description": "Same contract as `POST /v1/summarize`, including the `transcription_job_id` / `transcript_text` choice, except the derived job's `type` is `tags`, and its `result.tags` maps each category in the pipeline's fixed taxonomy (`call_reason`, `call_outcome`, ...) to the values selected for this transcript.",
         "operationId": "createTags",
         "requestBody": {
           "required": true,
@@ -866,7 +866,7 @@
         "properties": {
           "tags": {
             "type": "object",
-            "description": "Maps a fixed, lower_snake_case category (`call_reason`, `customer_sentiment`, ...) to the array of values selected for it. The taxonomy is fixed by the service, not configurable per account.",
+            "description": "Maps a fixed, lower_snake_case category (`call_reason`, `call_outcome`, ...) to the array of values selected for it. The taxonomy is fixed by the service, not configurable per account.",
             "additionalProperties": {
               "type": "array",
               "items": {

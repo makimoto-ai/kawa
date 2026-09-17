@@ -1,6 +1,6 @@
 # API Reference
 
-*Last updated: 2026-09-16*
+*Last updated: 2026-09-17*
 
 This page serves as a reference for all endpoints available for Kawa services.
 
@@ -44,23 +44,71 @@ Upload an audio file (multipart/form-data, max 10 MB, MP3 or WAV only). The job 
 | `500` | Internal server error. |
 | `502 PROVIDER_SUBMIT_FAILED` | The job was stored but submission to the pipeline failed. The job is marked `failed`. |
 
-Every error response carries a machine-readable `code` and `message`, plus the same top-level `requestId` as a successful one:
+### Example
+
+Request:
+
+```bash
+curl -sS -X POST "${MAKIMOTO_API_URL}/v1/transcriptions" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}" \
+  -F "file=@samples-audio/harvard.wav" \
+  -F "language=en" \
+  -F 'metadata={"call_id":"abc-123"}'
+```
+
+Success (`202`):
+
+```json
+{
+  "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
+  "status": "processing",
+  "received_at": "2026-07-01T09:15:23.412Z",
+  "requestId": "a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7"
+}
+```
+
+Poll for the result:
+
+```bash
+curl -sS "${MAKIMOTO_API_URL}/v1/transcriptions/b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}"
+```
+
+Succeeded (`200`), once the transcript is ready:
+
+```json
+{
+  "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
+  "status": "succeeded",
+  "type": "transcription",
+  "result": {
+    "language": "en",
+    "duration_seconds": 18,
+    "words_count": 48,
+    "transcript": [
+      { "text": "The birch canoe slid on the smooth planks.", "time_start": 0.0, "time_end": 3.1, "speaker_id": 0, "speaker_alias": "User" },
+      { "text": "Glue the sheet to the dark blue background.", "time_start": 3.4, "time_end": 6.6, "speaker_id": 0, "speaker_alias": "User" }
+    ]
+  },
+  "requestId": "d4e5f6a7-b8c9-4012-d3e4-f5a6b7c8d9e0"
+}
+```
+
+Failure (`415 UNSUPPORTED_AUDIO_FORMAT`), for example uploading an `.m4a` file:
+
+```json
+{
+  "error": { "code": "UNSUPPORTED_AUDIO_FORMAT", "message": "Unsupported audio format. Only MP3 and WAV are accepted." },
+  "requestId": "b2c3d4e5-f6a7-4890-b1c2-d3e4f5a6b7c8"
+}
+```
+
+Every error response carries this same envelope: a machine-readable `code` and `message`, plus the same top-level `requestId` as a successful one. `QUOTA_EXCEEDED` also carries `error.details`:
 
 ```json
 {
   "error": { "code": "QUOTA_EXCEEDED", "message": "Transcription minute quota exceeded.", "details": { "limit_minutes": 1000, "used_minutes": 998.2, "file_minutes": 5.0 } },
   "requestId": "d4e5f6a7-b8c9-40d1-92e3-f4a5b6c7d8e9"
-}
-```
-
-Example `202` Response:
-
-```json
-{
-  "job_id": "12cd73fe-182c-4040-a9d5-55b676d6e1c3",
-  "status": "processing",
-  "received_at": "2026-06-11T19:13:22.366Z",
-  "requestId": "a1b2c3d4-e5f6-4789-a0b1-c2d3e4f5a6b7"
 }
 ```
 
@@ -272,7 +320,7 @@ When `succeeded`, the response includes a `result` block, shaped according to `t
 
 | Field | Description |
 | --- | --- |
-| `tags` | Object mapping a fixed, `lower_snake_case` category (`call_reason`, `customer_sentiment`, …) to the array of values selected for it. The taxonomy is fixed by the service, not configurable per account. |
+| `tags` | Object mapping a fixed, `lower_snake_case` category (`call_reason`, `call_outcome`, …) to the array of values selected for it. The taxonomy is fixed by the service, not configurable per account. |
 | `meta_data` | Optional free-form object echoed back by the pipeline, or `null`. |
 
 `error`:
@@ -303,7 +351,7 @@ Example `200` Response (`succeeded`, `type: transcription`):
   "type": "transcription",
   "result": {
     "language": "en",
-    "duration_seconds": 18.4,
+    "duration_seconds": 18,
     "words_count": 48,
     "transcript": [
       { "text": "The birch canoe slid on the smooth planks.", "time_start": 0.0, "time_end": 3.1, "speaker_id": 0, "speaker_alias": "User" },
@@ -341,8 +389,8 @@ Example `200` Response (`succeeded`, `type: tags`):
   "source_job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
   "result": {
     "tags": {
-      "call_reason": ["billing_issue"],
-      "customer_sentiment": ["negative", "resolved"]
+      "call_reason": ["billing_issue", "refund"],
+      "call_outcome": ["issue_resolved"]
     },
     "meta_data": null
   },
@@ -413,16 +461,27 @@ Provide **exactly one** of `transcription_job_id` or `transcript_text`.
 | `500` | Internal server error. |
 | `502 PROVIDER_SUBMIT_FAILED` | The job was stored but submission to the summarisation provider failed. The job is marked `failed`. |
 
-Every error response carries a machine-readable `code` and `message`, plus the same top-level `requestId` as a successful one:
+### Example
 
-```json
-{
-  "error": { "code": "TRANSCRIPTION_NOT_READY", "message": "Transcription is still processing." },
-  "requestId": "b8c9d0e1-f2a3-4456-b7c8-d9e0f1a2b3c4"
-}
+Request, using `transcript_text` directly (no transcription job involved):
+
+```bash
+curl -sS -X POST "${MAKIMOTO_API_URL}/v1/summarize" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"transcript_text":"Customer: I was charged twice for my last invoice.\nAgent: Let me pull that up and issue a refund."}'
 ```
 
-Example `202` Response:
+Or, derived from an already-succeeded transcription job:
+
+```bash
+curl -sS -X POST "${MAKIMOTO_API_URL}/v1/summarize" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"transcription_job_id":"b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90"}'
+```
+
+Success (`202`):
 
 ```json
 {
@@ -434,13 +493,48 @@ Example `202` Response:
 }
 ```
 
+Poll for the result:
+
+```bash
+curl -sS "${MAKIMOTO_API_URL}/v1/transcriptions/7e2b1a3c-4f5d-4e6a-9b8c-1d2e3f4a5b6c" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}"
+```
+
+Succeeded (`200`):
+
+```json
+{
+  "job_id": "7e2b1a3c-4f5d-4e6a-9b8c-1d2e3f4a5b6c",
+  "status": "succeeded",
+  "type": "summary",
+  "source_job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
+  "result": {
+    "topic": "Billing dispute",
+    "summary": "Customer called about a duplicate charge on their latest invoice; agent confirmed the refund and closed the ticket.",
+    "meta_data": null
+  },
+  "requestId": "e5f6a7b8-c9d0-4123-e4f5-a6b7c8d9e0f1"
+}
+```
+
+Failure (`409 TRANSCRIPTION_NOT_READY`), if `transcription_job_id` points at a transcription still `queued` or `processing`:
+
+```json
+{
+  "error": { "code": "TRANSCRIPTION_NOT_READY", "message": "The transcription has not succeeded yet.", "details": { "status": "processing" } },
+  "requestId": "b8c9d0e1-f2a3-4456-b7c8-d9e0f1a2b3c4"
+}
+```
+
+Every error response carries this same envelope: a machine-readable `code` and `message`, plus the same top-level `requestId` as a successful one.
+
 ---
 
 ## `POST /v1/tag`
 
 *Tag a transcription.*
 
-Same contract as [`POST /v1/summarize`](#post-v1summarize) above, including the `transcription_job_id` / `transcript_text` choice, except the derived job's `type` is `tags`, and its `result.tags` maps each category in the pipeline's fixed taxonomy (`call_reason`, `customer_sentiment`, …) to the values selected for this transcript.
+Same contract as [`POST /v1/summarize`](#post-v1summarize) above, including the `transcription_job_id` / `transcript_text` choice, except the derived job's `type` is `tags`, and its `result.tags` maps each category in the pipeline's fixed taxonomy (`call_reason`, `call_outcome`, …) to the values selected for this transcript.
 
 ### Request Body (`application/json`)
 
@@ -450,6 +544,10 @@ Provide **exactly one** of `transcription_job_id` or `transcript_text`.
 | --- | --- | --- |
 | `transcription_job_id` | string (UUID) | `job_id` of a **transcription** job in status `succeeded`. |
 | `transcript_text` | string | A transcript supplied directly as plain text, with no transcription job behind it. |
+
+```json
+{ "transcription_job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90" }
+```
 
 ### Response Body (`202`)
 
@@ -465,7 +563,18 @@ Provide **exactly one** of `transcription_job_id` or `transcript_text`.
 
 Same as `POST /v1/summarize` above: `202`, `400 INVALID_JSON_BODY`, `400 MISSING_TRANSCRIPT_SOURCE`, `400 MULTIPLE_TRANSCRIPT_SOURCES`, `400 NOT_A_TRANSCRIPTION`, `401`, `403 FORBIDDEN`, `404 JOB_NOT_FOUND`, `409 TRANSCRIPTION_NOT_READY`, `422 TRANSCRIPT_EMPTY`, `500`, `502 PROVIDER_SUBMIT_FAILED`.
 
-Example `202` Response:
+### Example
+
+Request, tagging an already-succeeded transcription job:
+
+```bash
+curl -sS -X POST "${MAKIMOTO_API_URL}/v1/tag" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"transcription_job_id":"b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90"}'
+```
+
+Success (`202`):
 
 ```json
 {
@@ -476,6 +585,43 @@ Example `202` Response:
   "requestId": "d0e1f2a3-b4c5-4678-d9e0-f1a2b3c4d5e6"
 }
 ```
+
+Poll for the result:
+
+```bash
+curl -sS "${MAKIMOTO_API_URL}/v1/transcriptions/9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}"
+```
+
+Succeeded (`200`):
+
+```json
+{
+  "job_id": "9c8b7a6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+  "status": "succeeded",
+  "type": "tags",
+  "source_job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
+  "result": {
+    "tags": {
+      "call_reason": ["billing_issue", "refund"],
+      "call_outcome": ["issue_resolved"]
+    },
+    "meta_data": null
+  },
+  "requestId": "f6a7b8c9-d0e1-4234-f5a6-b7c8d9e0f1a2"
+}
+```
+
+Failure (`422 TRANSCRIPT_EMPTY`), if the source transcription succeeded but had no speech to tag:
+
+```json
+{
+  "error": { "code": "TRANSCRIPT_EMPTY", "message": "The transcription contains no speech to postprocess." },
+  "requestId": "f1a2b3c4-d5e6-4789-a0b1-c2d3e4f5a6b7"
+}
+```
+
+Every error response carries this same envelope: a machine-readable `code` and `message`, plus the same top-level `requestId` as a successful one.
 
 ---
 
