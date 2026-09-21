@@ -79,6 +79,9 @@ markdown_extensions:
 copyright: Kawa is developed in the open by Makimoto, operated by Makimoto Technology Pte Ltd, a wholly-owned subsidiary of the Toku Group.
 
 extra:
+  analytics:
+    provider: google
+    property: G-1E67V9L3WZ
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/makimoto-ai/kawa
