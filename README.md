@@ -5,7 +5,7 @@
 <!-- Previous Version for Reference
 [![Licence: MIT](https://img.shields.io/badge/Licence-MIT-blue.svg)](LICENSE)
 [![Status: Live](https://img.shields.io/badge/Status-Live-brightgreen.svg)](https://makimoto.ai)
-[![API docs](https://img.shields.io/badge/API-docs-6200EB.svg)](https://makimoto-ai.github.io/kawa/)
+[![API docs](https://img.shields.io/badge/API-docs-6200EB.svg)](https://docs.makimoto.ai/)
 [![Made in Singapore](https://img.shields.io/badge/Made%20in-Singapore-red.svg)](#-data-residency-and-sovereignty)
 -->
 <p align="center">
@@ -19,7 +19,7 @@
 
 **Kawa is live.** Makimoto Kawa is the first open-source conversational AI infrastructure built and hosted in Singapore, for teams working under APAC data-residency and regulatory requirements. The post-conversation transcription API and an interactive playground are available now.
 
-**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Quickstart](demo/QUICKSTART.md) · [Python SDK](https://github.com/makimoto-ai/makimoto-python) · [API docs](https://makimoto-ai.github.io/kawa/) · [Roadmap](ROADMAP.md)
+**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Quickstart](demo/QUICKSTART.md) · [Python SDK](https://github.com/makimoto-ai/makimoto-python) · [API docs](https://docs.makimoto.ai/) · [Roadmap](ROADMAP.md)
 
 ## 🚀 Get started
 
@@ -52,7 +52,7 @@ else:
     print(job.error)
 ```
 
-See its [documentation](https://makimoto-ai.github.io/kawa/sdks/python/) for installation, usage, and the full API reference.
+See its [documentation](https://docs.makimoto.ai/sdks/python/) for installation, usage, and the full API reference.
 
 ## 🎛️ Playground and reference client
 
