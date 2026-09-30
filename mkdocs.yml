@@ -1,6 +1,6 @@
 site_name: Kawa Docs
 site_description: Documentation for Kawa, Makimoto's open-source transcription API.
-site_url: https://makimoto-ai.github.io/kawa/
+site_url: https://docs.makimoto.ai/
 
 repo_name: makimoto-ai/kawa
 repo_url: https://github.com/makimoto-ai/kawa
