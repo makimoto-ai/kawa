@@ -79,7 +79,7 @@ markdown_extensions:
 copyright: >-
   Kawa is developed in the open by Makimoto, operated by Makimoto Technology Pte Ltd,
   a wholly-owned subsidiary of the Toku Group.
-  <a href="#__consent">Change cookie settings</a>
+  <a href="#__consent" class="md-copyright__consent">Change cookie settings</a>
 
 extra:
   analytics:
@@ -95,8 +95,10 @@ extra:
       - reject
       - manage
     cookies:
-      analytics: Google Analytics
-      github: GitHub
+      analytics: >-
+        Google Analytics: records which pages are visited so we know what to improve
+      github: >-
+        GitHub: loads the repository's latest version, stars and forks from GitHub
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/makimoto-ai/kawa
