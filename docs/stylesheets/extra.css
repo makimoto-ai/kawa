@@ -17,3 +17,30 @@
      header dark but use the lighter brand blue for legible inline links. */
   --md-typeset-a-color: #1553d8;
 }
+
+/* The outlined "Manage settings" button inherits the navy primary colour,
+   which disappears against the slate background. Use cyan in dark mode. */
+[data-md-color-scheme="slate"] .md-consent .md-button:not(.md-button--primary) {
+  color: var(--md-accent-fg-color);
+  border-color: var(--md-accent-fg-color);
+}
+
+/* Footer link that reopens the cookie consent banner, styled as a small
+   outlined button so it reads as a control rather than part of the
+   copyright sentence. The footer is always dark, so colours are fixed. */
+.md-copyright__consent {
+  display: block;
+  width: fit-content;
+  margin-top: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0.2rem;
+  color: #fff;
+  transition: color 125ms, border-color 125ms;
+}
+
+.md-copyright__consent:hover,
+.md-copyright__consent:focus {
+  color: var(--md-accent-fg-color);
+  border-color: var(--md-accent-fg-color);
+}
