@@ -1,6 +1,6 @@
 # Changelog
 
-*Last updated: 2026-09-16*
+*Last updated: 2026-10-01*
 
 *Notable changes to Kawa, most recent first.* 
 
@@ -8,7 +8,7 @@ For more info, (see the [FAQ](faq.md) and [ROADMAP.md](https://github.com/makimo
 
 For the Python SDK's own release history, see its [CHANGELOG.md](https://github.com/makimoto-ai/makimoto-python/blob/main/CHANGELOG.md).
 
-## 2026-09-16 - Mako Release
+## 2026-09-16
 
 - New `POST /v1/summarize` and `POST /v1/tag` endpoints derive a summary or a fixed-taxonomy tag set from a succeeded transcription; see the [API Reference](service/api-reference.md#post-v1summarize).
 - `GET /v1/transcriptions/{job_id}` now returns `type` (`transcription`, `summary`, or `tags`) and, for a postprocessing job, `source_job_id`.

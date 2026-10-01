@@ -64,6 +64,7 @@ plugins:
 
 exclude_docs: |
   .venv/
+  includes/
 
 extra_css:
   - stylesheets/extra.css
@@ -75,6 +76,9 @@ markdown_extensions:
       permalink: true
   - pymdownx.superfences
   - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: [docs/includes]
+      check_paths: true
 
 copyright: >-
   Kawa is developed in the open by Makimoto, operated by Makimoto Technology Pte Ltd,
