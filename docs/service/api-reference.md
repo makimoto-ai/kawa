@@ -6,9 +6,7 @@ This page serves as a reference for all endpoints available for Kawa services.
 
 You may also refer to [`openapi.json`](https://github.com/makimoto-ai/kawa/blob/main/docs/openapi.json) in the Kawa repository.
 
-To try these endpoints without writing code, fork the collection into your own Postman workspace. In your fork, set the `raw_api_key` collection variable to your API key; every request authenticates with it from there.
-
---8<-- "postman-button.html"
+To try these endpoints without writing code, fork the [Kawa collection](https://www.postman.com/makimoto-ai/makimoto-kawa-api/collection/9muqmgc/makimoto-transcription-api) into your own Postman workspace. In your fork, set the `raw_api_key` collection variable to your API key; every request authenticates with it from there.
 
 ## `POST /v1/transcriptions`
 

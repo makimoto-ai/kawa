@@ -20,9 +20,11 @@ There are three ways to make your first call:
 
 - **In code**, with the [`quickstart.py`](https://github.com/makimoto-ai/kawa/blob/main/demo/quickstart.py) script or the [`KawaClient`](https://github.com/makimoto-ai/kawa/blob/main/demo/kawa_client.py) reference client, a small, fully typed client that depends only on `requests`.
 
-- **In Postman**, by forking the Kawa collection into your own workspace: open it with the button below and choose **Fork** (you will need to sign in to Postman). In your fork, open the collection's **Variables** tab, paste your API key into the *Current value* of `raw_api_key`, save, then send **Transcriptions > List the caller's transcription jobs**. Nothing else needs editing. To submit audio, choose a file for the `file` field in **Create a transcription job**.
+- **In Postman**, fork the [Kawa collection](https://www.postman.com/makimoto-ai/makimoto-kawa-api/collection/9muqmgc/makimoto-transcription-api) into your own workspace and choose **Fork** (you will need to sign in to Postman). 
 
---8<-- "postman-button.html"
+    - In your fork, open the collection's **Variables** tab, paste your API key into the *Current value* of `raw_api_key`. 
+    - Send **Transcriptions > List the caller's transcription jobs**. 
+    - To submit audio, choose a file for the `file` field in **Create a transcription job**.
 
 ## 4. Submit, poll, and read a transcript
 

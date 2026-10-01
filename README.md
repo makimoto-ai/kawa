@@ -57,9 +57,7 @@ See its [documentation](https://docs.makimoto.ai/sdks/python/) for installation,
 
 ## 🧪 Try it in Postman
 
-[![Fork in Postman](https://img.shields.io/badge/Fork_in-Postman-FF6C37?logo=postman&logoColor=white)](https://www.postman.com/makimoto-ai/makimoto-kawa-api/collection/9muqmgc/makimoto-transcription-api)
-
-Open the collection in our public Postman workspace and choose **Fork** to copy it into your own. In your fork, open the collection's **Variables** tab, paste your API key into the *Current value* of `raw_api_key`, save, then send **Transcriptions > List the caller's transcription jobs**; nothing else needs editing. The fork tracks the published collection, so you can pull new endpoints as they ship.
+Open the [Kawa Collection](https://www.postman.com/makimoto-ai/makimoto-kawa-api/collection/9muqmgc/makimoto-transcription-api) in our public Postman workspace and choose **Fork** to copy it into your own. In your fork, open the collection's **Variables** tab, paste your API key into the *Current value* of `raw_api_key`, save, then send **Transcriptions > List the caller's transcription jobs**; nothing else needs editing. The fork tracks the published collection, so you can pull new endpoints as they ship.
 
 ## 🎛️ Playground and reference client
 
