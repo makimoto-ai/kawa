@@ -44,3 +44,10 @@
   color: var(--md-accent-fg-color);
   border-color: var(--md-accent-fg-color);
 }
+
+/* Fork in Postman badge (docs/includes/postman-button.html). Keep the link
+   box tight to the badge so no underline or gap shows beneath it. */
+.md-typeset .postman-fork a {
+  display: inline-block;
+  line-height: 0;
+}
