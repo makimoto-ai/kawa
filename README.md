@@ -19,15 +19,16 @@
 
 **Kawa is live.** Makimoto Kawa is the first open-source conversational AI infrastructure built and hosted in Singapore, for teams working under APAC data-residency and regulatory requirements. The post-conversation transcription API and an interactive playground are available now.
 
-**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Quickstart](demo/QUICKSTART.md) · [Python SDK](https://github.com/makimoto-ai/makimoto-python) · [API docs](https://docs.makimoto.ai/) · [Roadmap](ROADMAP.md)
+**Quick links:** [Get an account](https://makimoto.ai) · [Playground](demo) · [Postman](#-try-it-in-postman) · [Quickstart](demo/QUICKSTART.md) · [Python SDK](https://github.com/makimoto-ai/makimoto-python) · [API docs](https://docs.makimoto.ai/) · [Roadmap](ROADMAP.md)
 
 ## 🚀 Get started
 
 1. **Create an account** at [makimoto.ai](https://makimoto.ai). Every account includes a **free monthly allowance of 1,000 minutes**.
 2. **Generate an API key** from the dashboard.
-3. **Try it**, two ways:
+3. **Try it**, three ways:
    - 🖥️ **In your browser** with the [playground](demo): pick a sample, submit, read the transcript.
    - 🐍 **In code** with the [Python SDK](https://github.com/makimoto-ai/makimoto-python) (`pip install makimoto-kawa`), the [`quickstart.py`](demo/quickstart.py) script, or the bundled [`KawaClient`](demo/kawa_client.py) reference client.
+   - 🧪 **In Postman**: fork the collection from our [public Postman workspace](#-try-it-in-postman).
 
 Need more minutes, or have a regulated-sector or APAC-language use case? Email [contact@makimoto.ai](mailto:contact@makimoto.ai) and we will help size a plan.
 
@@ -53,6 +54,12 @@ else:
 ```
 
 See its [documentation](https://docs.makimoto.ai/sdks/python/) for installation, usage, and the full API reference.
+
+## 🧪 Try it in Postman
+
+[![Fork in Postman](https://img.shields.io/badge/Fork_in-Postman-FF6C37?logo=postman&logoColor=white)](https://www.postman.com/makimoto-ai/makimoto-kawa-api/collection/9muqmgc/makimoto-transcription-api)
+
+Open the collection in our public Postman workspace and choose **Fork** to copy it into your own. In your fork, open the collection's **Variables** tab, paste your API key into the *Current value* of `raw_api_key`, save, then send **Transcriptions > List the caller's transcription jobs**; nothing else needs editing. The fork tracks the published collection, so you can pull new endpoints as they ship.
 
 ## 🎛️ Playground and reference client
 
