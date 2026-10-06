@@ -158,6 +158,19 @@ def curl_postprocess(api_url: str, dimension: str, source_job_id: str) -> str:
     )
 
 
+def curl_postprocess_text(api_url: str, dimension: str, transcript: str) -> str:
+    """POST /v1/summarize or /v1/tag with the transcript sent inline."""
+    path = POSTPROCESSING_PATHS[dimension]
+    body = json.dumps({"transcript_text": (transcript or "").strip() or "<transcript>"}, separators=(",", ":"))
+    return (
+        "curl -sS -X POST \\\n"
+        f"  {_shell_quote(api_url.rstrip('/') + path)} \\\n"
+        '  -H "Authorization: Bearer $MAKIMOTO_API_KEY" \\\n'
+        "  -H 'Content-Type: application/json' \\\n"
+        f"  -d {_shell_quote(body)}"
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Small shared utilities
 # --------------------------------------------------------------------------- #
@@ -1424,6 +1437,105 @@ def tag(
     source_job_id: str, token: str, api_url: str, pairs: dict[str, Any], rows: list[dict[str, str]]
 ) -> Iterator[tuple[Any, ...]]:
     yield from run_postprocess("tags", source_job_id, token, api_url, pairs, rows)
+
+
+def postprocess_text(
+    dimension: str,
+    transcript: str,
+    token: str,
+    api_url: str,
+    rows: list[dict[str, str]],
+) -> Iterator[tuple[Any, ...]]:
+    """POST pasted transcript text to /v1/summarize or /v1/tag, then poll.
+
+    Same job lifecycle as ``run_postprocess``, but with no source transcription
+    there is no pairing to record. The new job still goes into the rail.
+
+    Yields: (status, result, raw, raw_open, rows)
+    """
+    noun = JOB_TYPE_LABELS[dimension]
+    skip = gr.skip()
+    collapsed, expanded = gr.update(open=False), gr.update(open=True)
+    text = (transcript or "").strip()
+    if not (token or "").strip():
+        yield status_pill("Add your API key under Connection to sign in.", "bad"), skip, skip, skip, skip
+        return
+    if not text:
+        yield status_pill("Paste a transcript first.", "bad"), skip, skip, skip, skip
+        return
+    if len(text) > MAX_TRANSCRIPT_CHARS:
+        yield (
+            status_pill(f"Transcript is {len(text):,} characters; the limit is {MAX_TRANSCRIPT_CHARS:,}.", "bad"),
+            skip, skip, skip, skip,
+        )
+        return
+
+    client = _client(token, api_url)
+    yield status_pill(f"Submitting for {noun.lower()}…", "pending"), "", skip, skip, skip
+    try:
+        job = client.create_postprocessing(dimension, transcript_text=text)
+    except (KawaError, ValueError, requests.RequestException) as exc:
+        yield status_pill(f"{noun} request refused: {exc}", "bad"), "", error_dump(exc), expanded, skip
+        return
+
+    job_id = job.job_id
+    row = {
+        "job_id": job_id,
+        "type": dimension,
+        "status": job.status or "processing",
+        "name": "",
+        "created": str(job.raw.get("received_at") or job.raw.get("created_at") or ""),
+    }
+    yield (
+        status_pill(f"Accepted · {job_id}", "pending"),
+        derived_block(noun, job_id, status_pill("Queued with the provider…", "pending")),
+        response_dump(client.last_status, client.last_headers, job.raw),
+        collapsed,
+        _upsert_row(rows, row),
+    )
+
+    try:
+        for polled in client.poll(job_id):
+            raw = response_dump(client.last_status, client.last_headers, polled.raw)
+            if polled.is_terminal:
+                finished = _upsert_row(rows, {**row, "status": polled.status})
+                if polled.status == "succeeded":
+                    result = derived_block(noun, job_id, postprocessing_html(polled))
+                    yield status_pill(f"{noun} ready", "good"), result, raw, collapsed, finished
+                    return
+                err = polled.error or {}
+                detail = err.get("message") or err.get("code") or "The job failed."
+                result = derived_block(noun, job_id, f'<div class="mk-empty">Failed: {_esc(detail)}</div>')
+                yield status_pill(f"Failed: {detail}", "bad"), result, raw, expanded, finished
+                return
+            pending = status_pill(f"{polled.status.capitalize()}…", "pending")
+            yield pending, derived_block(noun, job_id, pending), raw, collapsed, skip
+    except (KawaError, requests.RequestException) as exc:
+        yield status_pill(f"Polling failed: {exc}", "bad"), skip, error_dump(exc), expanded, skip
+        return
+
+    yield (
+        status_pill(f"Still processing after the polling window. Open {job_id} from Your jobs later.", "pending"),
+        derived_block(noun, job_id, status_pill("Still processing.", "pending")),
+        skip, skip, skip,
+    )
+
+
+def summarize_text(
+    transcript: str, token: str, api_url: str, rows: list[dict[str, str]]
+) -> Iterator[tuple[Any, ...]]:
+    yield from postprocess_text("summary", transcript, token, api_url, rows)
+
+
+def tag_text(
+    transcript: str, token: str, api_url: str, rows: list[dict[str, str]]
+) -> Iterator[tuple[Any, ...]]:
+    yield from postprocess_text("tags", transcript, token, api_url, rows)
+
+
+# Named generator functions rather than lambdas: Gradio only streams updates
+# from a handler it can see is a generator.
+TEXT_HANDLERS = {"summary": summarize_text, "tags": tag_text}
 
 
 def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
