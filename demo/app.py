@@ -516,12 +516,15 @@ CSS = f"""
 .mk-joblist button.mk-jobrow-unknown {{ border-left-color: var(--mk-muted) !important; }}
 .mk-joblist button.mk-jobrow-unknown::after {{ content: "JOB"; background: var(--mk-muted); }}
 
-/* Outcome is marked at the start of the row, so the rail can be scanned for
-   trouble (or for what finished cleanly) without opening anything. ::after is
-   already the type badge, which is why these lead rather than follow. The
-   marker carries the outcome on its own, so the label never spells it out. */
+/* Status is marked at the start of the row, so the rail can be scanned for
+   trouble (or for what finished cleanly, or is still waiting) without opening
+   anything. ::after is already the type badge, which is why these lead rather
+   than follow. A marked status is not repeated in the label; any other 
+   status is spelt out there instead (see row_label). */
 .mk-joblist button.mk-jobrow-failed::before,
-.mk-joblist button.mk-jobrow-succeeded::before {{
+.mk-joblist button.mk-jobrow-succeeded::before,
+.mk-joblist button.mk-jobrow-queued::before,
+.mk-joblist button.mk-jobrow-processing::before {{
   display: inline-block; vertical-align: middle;
   margin-right: 7px; position: relative; top: -1px;
   width: 16px; height: 16px; border-radius: 999px;
@@ -530,13 +533,49 @@ CSS = f"""
 }}
 .mk-joblist button.mk-jobrow-failed::before {{ content: "!"; background: var(--mk-bad); }}
 .mk-joblist button.mk-jobrow-succeeded::before {{ content: "\\2713"; background: var(--mk-good); }}
+/* An ellipsis for "waiting its turn". The text after the slash is what a
+   screen reader announces, since the label no longer says "queued". */
+.mk-joblist button.mk-jobrow-queued::before {{
+  content: "\\2026" / "Queued"; background: var(--mk-pending); line-height: 12px;
+}}
+/* A spinning ring for "being worked on"; still for anyone who asks for less
+   motion. Longhands, as the border shorthand did not survive in the page. */
+.mk-joblist button.mk-jobrow-processing::before {{
+  content: "" / "Processing"; background: transparent; box-sizing: border-box;
+  border-width: 2.5px; border-style: solid;
+  border-color: transparent var(--mk-pending) var(--mk-pending) var(--mk-pending);
+  animation: mk-spin 0.9s linear infinite;
+}}
+@keyframes mk-spin {{ to {{ transform: rotate(360deg); }} }}
+@media (prefers-reduced-motion: reduce) {{
+  .mk-joblist button.mk-jobrow-processing::before {{ animation: none; }}
+}}
 
-/* Legend: the same three badges, so the rail needs no explaining. */
-.mk-legend {{ display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }}
-.mk-legend small {{
-  color: var(--mk-muted); font-size: 11px; text-transform: uppercase;
+/* Legend and type filter in one: a checkbox group drawn as the rail's three
+   badges. Each checkbox's name is its job type, which picks the colour. Once
+   any badge is selected the others dim, and selected ones show a ×. */
+.mk-typefilter {{ margin: 0 0 6px -4px; }}
+/* Padded so the keyboard focus ring is not clipped by the wrapper. */
+.mk-typefilter [data-testid="checkbox-group"] {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px; }}
+.mk-typefilter [data-testid="checkbox-group"]::before {{
+  content: "Job types"; color: var(--mk-muted); font-size: 11px; text-transform: uppercase;
   letter-spacing: 0.06em; margin-right: 2px;
 }}
+.mk-typefilter [data-testid="checkbox-group"] label {{
+  cursor: pointer; margin: 0; padding: 3px 9px; border: 0 !important; border-radius: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #FFFFFF !important; box-shadow: none !important; transition: opacity 0.12s;
+}}
+.mk-typefilter [data-testid="checkbox-group"] label input {{
+  position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;
+}}
+.mk-typefilter [data-testid="checkbox-group"] label span {{ margin: 0 !important; color: inherit !important; }}
+.mk-typefilter label:has(input[name="transcription"]) {{ background: {TYPE_COLOURS["transcription"]} !important; }}
+.mk-typefilter label:has(input[name="summary"]) {{ background: {TYPE_COLOURS["summary"]} !important; color: #010E39 !important; }}
+.mk-typefilter label:has(input[name="tags"]) {{ background: {TYPE_COLOURS["tags"]} !important; }}
+.mk-typefilter label:has(input:focus-visible) {{ outline: 2px solid var(--mk-violet); outline-offset: 2px; }}
+.mk-typefilter [data-testid="checkbox-group"]:has(input:checked) label:not(:has(input:checked)) {{ opacity: 0.4; }}
+.mk-typefilter label:has(input:checked) span::after {{ content: " \\00D7"; }}
 
 /* Type tag + detail heading -------------------------------------------- */
 .mk-jobhead {{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 8px; }}
@@ -789,6 +828,11 @@ def tags_html(result: TagsResult) -> str:
 # "unknown" is the playground's own fourth case: a listed job whose type could
 # not be resolved, which opening it will settle.
 JOB_TYPE_LABELS = {"transcription": "Transcription", "summary": "Summary", "tags": "Tags", "unknown": "Job"}
+# The three real types, in the order the legend and type filter show them.
+JOB_TYPES = ("transcription", "summary", "tags")
+
+# Statuses shown as an icon at the start of a rail row rather than in words.
+MARKED_STATUSES = ("succeeded", "failed", "queued", "processing")
 
 
 def postprocessing_html(job: Job) -> str:
@@ -916,8 +960,9 @@ def _job_filename(job: Job) -> str | None:
     return str(name) if name else None
 
 
-def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, str]:
-    """Fetch one job purely to learn its ``type``.
+def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, dict[str, str]]:
+    """Fetch one job to learn its ``type`` and, for a summary or tags job, its
+    source transcription, which the list endpoint does not report.
 
     Given its own client, and therefore its own ``requests.Session``, because
     these run on a thread pool and a Session is not safe to share. A failure
@@ -925,43 +970,44 @@ def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     it resolves the type properly.
     """
     try:
-        return job_id, KawaClient(key=token, api_url=api_url).get_transcription(job_id).type
+        job = KawaClient(key=token, api_url=api_url).get_transcription(job_id)
+        return job_id, {"type": job.type, "source": job.source_job_id or ""}
     except (KawaError, requests.RequestException, ValueError):
-        return job_id, "unknown"
+        return job_id, {"type": "unknown", "source": ""}
 
 
 def _rows_for(
-    jobs: list[Job], token: str, api_url: str, types: dict[str, str]
+    jobs: list[Job], token: str, api_url: str, types: dict[str, dict[str, str]]
 ) -> list[dict[str, str]]:
     """Turn one page of jobs into rail rows, labelled by job type.
 
-    Job types are cached for the session (``types`` is updated in place) and a later
-    page or refresh only resolves rows it has not seen before.
+    What ``_resolve_type`` learns is cached for the session (``types`` is updated
+    in place) and a later page or refresh only resolves rows it has not seen before.
     """
     unresolved = [j.job_id for j in jobs if not _job_filename(j) and j.job_id not in types]
     if unresolved:
         with ThreadPoolExecutor(max_workers=min(8, len(unresolved))) as pool:
-            for job_id, kind in pool.map(lambda jid: _resolve_type(token, api_url, jid), unresolved):
-                types[job_id] = kind
+            for job_id, resolved in pool.map(lambda jid: _resolve_type(token, api_url, jid), unresolved):
+                types[job_id] = resolved
 
-    return [
-        {
+    rows = []
+    for job in jobs:
+        resolved = types.get(job.job_id, {})
+        rows.append({
             "job_id": job.job_id,
-            "type": "transcription" if _job_filename(job) else types.get(job.job_id, "unknown"),
+            "type": "transcription" if _job_filename(job) else resolved.get("type", "unknown"),
             "status": job.status,
             "name": _job_filename(job) or "",
             "created": str(job.raw.get("created_at") or job.raw.get("received_at") or ""),
-        }
-        for job in jobs
-    ]
+            "source": resolved.get("source", ""),
+        })
+    return rows
 
 
-def _is_filtered(filters: tuple[str, str, str]) -> bool:
-    """Whether any of the (type, status, since) filters narrows."""
+def _is_filtered(filters: tuple[list[str], str, str]) -> bool:
+    """Whether any of the (types, status, since) filters narrows."""
     type_filter, status_filter, since_filter = filters
-    if any(f not in ("", "all") for f in (type_filter, status_filter)):
-        return True
-    return bool((since_filter or "").strip())
+    return bool(type_filter) or status_filter not in ("", "all") or bool((since_filter or "").strip())
 
 
 def _jobs_loaded_pill(total: int, loaded: int, filtered: bool) -> str:
@@ -974,9 +1020,9 @@ def _fill_page(
     client: KawaClient,
     token: str,
     api_url: str,
-    types: dict[str, str],
+    types: dict[str, dict[str, str]],
     cursor: str | None,
-    filters: tuple[str, str, str],
+    filters: tuple[list[str], str, str],
     want: int = JOBS_PAGE_SIZE,
 ) -> tuple[list[dict[str, str]], str | None]:
     """Walk pages from ``cursor`` until ``want`` rows match, or they run out.
@@ -998,17 +1044,19 @@ def _fill_page(
 def list_jobs_view(
     token: str,
     api_url: str,
-    known_types: dict[str, str],
-    type_filter: str = "all",
+    known_types: dict[str, dict[str, str]],
+    type_filter: list[str] | None = None,
     status_filter: str = "all",
     since_filter: str = "",
-) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
+) -> tuple[list[dict[str, str]], dict[str, dict[str, str]], str, str, str | None, Any, int]:
     """GET /v1/transcriptions - the newest jobs matching the filters.
+
+    ``type_filter`` is the job types selected in the legend; none means all.
 
     Returns: (rows, type_cache, list_status, list_curl, next_cursor, more_btn, total)
     """
     types = dict(known_types or {})
-    filters = (type_filter, status_filter, since_filter)
+    filters = (list(type_filter or []), status_filter, since_filter)
     filtered = _is_filtered(filters)
     if not (token or "").strip():
         return (
@@ -1043,21 +1091,21 @@ def list_jobs_view(
 def load_more_jobs_view(
     token: str,
     api_url: str,
-    known_types: dict[str, str],
+    known_types: dict[str, dict[str, str]],
     rows: list[dict[str, str]],
     cursor: str | None,
     total: int,
-    type_filter: str,
+    type_filter: list[str] | None,
     status_filter: str,
     since_filter: str,
-) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
+) -> tuple[list[dict[str, str]], dict[str, dict[str, str]], str, str, str | None, Any, int]:
     """Another page of matches, appended to what the rail already shows.
 
     Returns: (rows, type_cache, list_status, list_curl, next_cursor, more_btn, total)
     """
     types = dict(known_types or {})
     loaded = list(rows or [])
-    filters = (type_filter, status_filter, since_filter)
+    filters = (list(type_filter or []), status_filter, since_filter)
     filtered = _is_filtered(filters)
     if not cursor:
         return (
@@ -1090,45 +1138,48 @@ def load_more_jobs_view(
     )
 
 
-def row_label(row: dict[str, str]) -> str:
-    """What a rail row says, after its type badge."""
+def row_label(row: dict[str, str], pairs: dict[str, Any] | None = None) -> str:
+    """What a rail row says, after its type badge.
+
+    A summary or tags job also names the transcription it came from, shortened
+    to fit; the detail panel has the full id. The API's ``source_job_id`` comes
+    first, then this browser's record (``pairs``) for jobs that predate it.
+    Jobs made from pasted text have no source, so say nothing.
+    """
     when = (row["created"][:16] or "").replace("T", " ") or "no date"
     what = row["name"] or row["job_id"]
-    suffix = "" if row["status"] in ("succeeded", "failed") else f"  ·  {row['status']}"
-    return f"{what}  ·  {when}{suffix}"
+    source = row.get("source") or (pairs or {}).get("by_result", {}).get(row["job_id"], "")
+    origin = f"  ·  from {source[:8]}…" if source else ""
+    suffix = "" if row["status"] in MARKED_STATUSES else f"  ·  {row['status']}"
+    return f"{what}{origin}  ·  {when}{suffix}"
 
 
 def row_classes(row: dict[str, str]) -> list[str]:
-    """Classes for one rail row: its type badge, and its outcome marker.
+    """Classes for one rail row: its type badge, and its status marker.
 
     Both are drawn in CSS rather than written into the button's label, which
-    can only hold plain text. Only the two terminal outcomes get a marker; a
-    job still queued or processing has none, and says so in its label instead.
+    can only hold plain text. Only MARKED_STATUSES get a marker; any other
+    status the API reports has none, and is spelt out in the label instead.
     """
     classes = ["mk-jobrow", f"mk-jobrow-{row['type']}"]
-    if row["status"] in ("succeeded", "failed"):
+    if row["status"] in MARKED_STATUSES:
         classes.append(f"mk-jobrow-{row['status']}")
     return classes
 
 
-def rail_legend_html() -> str:
-    """The badge for each job type, keyed to the colours used in the rail."""
-    chips = "".join(
-        f'<span class="mk-tag mk-tag-{kind}">{_esc(JOB_TYPE_LABELS[kind])}</span>'
-        for kind in ("transcription", "summary", "tags")
-    )
-    return f'<div class="mk-legend"><small>Job types</small>{chips}</div>'
-
-
 def _rows_matching(
-    rows: list[dict[str, str]], type_filter: str, status_filter: str, since_filter: str
+    rows: list[dict[str, str]], type_filter: list[str], status_filter: str, since_filter: str
 ) -> list[dict[str, str]]:
-    """Which rail rows survive the type/status/since filters, in one pass."""
+    """Which rail rows survive the types/status/since filters, in one pass.
+
+    An empty ``type_filter`` keeps every type. A row whose type could not be
+    resolved ("unknown") only survives that case.
+    """
     since = (since_filter or "").strip()
     return [
         row
         for row in rows
-        if type_filter in ("", "all") or row["type"] == type_filter
+        if not type_filter or row["type"] in type_filter
         if status_filter in ("", "all") or row["status"] == status_filter
         if not since or row["created"][:10] >= since
     ]
@@ -1385,6 +1436,7 @@ def run_postprocess(
         "status": job.status or "processing",
         "name": "",
         "created": str(job.raw.get("received_at") or job.raw.get("created_at") or ""),
+        "source": source_job_id,
     }
     yield emit(
         status_pill(f"Accepted · {job_id}", "pending"),
@@ -1552,7 +1604,7 @@ def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     return status_pill("Deleted", "good"), _pretty_json(body)
 
 
-def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str, None, Any, int]:
+def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, dict[str, str]], str, None, Any, int]:
     """Clear the API key and reset the playground.
 
     The recorded pairings are left alone: they are job ids this browser
@@ -1563,7 +1615,7 @@ def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str, N
         "",                                     # token box (holds the API key)
         signed_in_html(""),                     # connection line
         [],                                     # job rail
-        {},                                     # resolved-type cache
+        {},                                     # type and source cache
         status_pill("Disconnected.", ""),       # list status
         None,                                   # pagination cursor
         gr.update(visible=False),               # load-more button
@@ -1649,8 +1701,9 @@ def build_app() -> gr.Blocks:
     first_file = str(first_path) if first_path else None
 
     with gr.Blocks(title="Makimoto Kawa · Playground") as app:
-        # The job rail's rows, newest first, and the resolved type of each job
-        # id seen so far (a type never changes, so it is only looked up once).
+        # The job rail's rows, newest first, and the type and source
+        # transcription of each job id seen so far (neither ever changes, so
+        # each job is only looked up once).
         jobs_state = gr.State([])
         types_state = gr.State({})
         # The cursor for the page after the one the rail is showing, or None
@@ -1844,23 +1897,27 @@ def build_app() -> gr.Blocks:
                             )
                             refresh_btn = gr.Button("Refresh", variant="secondary", scale=0, min_width=110)
                         list_status = gr.HTML(status_pill("Refresh to load your jobs.", ""))
-                        gr.HTML(rail_legend_html(), padding=False)
+                        # The legend doubles as the type filter: click badges to
+                        # show only those types; none selected shows all.
+                        type_filter_cb = gr.CheckboxGroup(
+                            label="Job types",
+                            choices=[(JOB_TYPE_LABELS[kind], kind) for kind in JOB_TYPES],
+                            value=[],
+                            container=False,
+                            elem_classes=["mk-typefilter"],
+                        )
 
                         with gr.Row(equal_height=True):
-                            type_filter_dd = gr.Dropdown(
-                                label="Type",
-                                choices=[
-                                    ("All types", "all"),
-                                    ("Transcription", "transcription"),
-                                    ("Summary", "summary"),
-                                    ("Tags", "tags"),
-                                ],
-                                value="all",
-                                scale=1,
-                            )
                             status_filter_dd = gr.Dropdown(
-                                label="Outcome",
-                                choices=[("All", "all"), ("Succeeded", "succeeded"), ("Failed", "failed")],
+                                label="Status",
+                                choices=[
+                                    # Same options and order as makimoto's Logs page.
+                                    ("All", "all"),
+                                    ("Succeeded", "succeeded"),
+                                    ("Failed", "failed"),
+                                    ("Queued", "queued"),
+                                    ("Processing", "processing"),
+                                ],
                                 value="all",
                                 scale=1,
                             )
@@ -1871,8 +1928,8 @@ def build_app() -> gr.Blocks:
                             )
 
                         with gr.Column(elem_classes=["mk-joblist"]):
-                            @gr.render(inputs=[jobs_state])
-                            def render_job_rail(rows: list[dict[str, str]]):
+                            @gr.render(inputs=[jobs_state, pairs_state])
+                            def render_job_rail(rows: list[dict[str, str]], pairs: dict[str, Any]):
                                 if not rows:
                                     gr.HTML(
                                         '<div class="mk-empty">Nothing to show. Refresh to list your '
@@ -1882,7 +1939,7 @@ def build_app() -> gr.Blocks:
                                     return
                                 for row in rows:
                                     gr.Button(
-                                        row_label(row),
+                                        row_label(row, pairs),
                                         variant="secondary",
                                         elem_classes=row_classes(row),
                                     ).click(
@@ -2054,7 +2111,7 @@ def build_app() -> gr.Blocks:
             )
 
         # Your jobs.
-        filter_inputs = [type_filter_dd, status_filter_dd, since_filter_box]
+        filter_inputs = [type_filter_cb, status_filter_dd, since_filter_box]
         list_inputs = [token_box, api_url_box, types_state, *filter_inputs]
         list_outputs = [jobs_state, types_state, list_status, list_curl, cursor_state, more_btn, total_state]
         refresh_btn.click(list_jobs_view, inputs=list_inputs, outputs=list_outputs)
