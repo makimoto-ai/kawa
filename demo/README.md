@@ -33,7 +33,7 @@ interfaces. Then add an API key in the **Connection** panel (or preload it with
 
 ## What it does
 
-The playground follows the one flow the API is built around, across two tabs:
+The playground follows the one flow the API is built around, across four tabs:
 
 **Transcribe**
 - Pick a bundled sample from the sample folder, or add a recording from your
@@ -43,6 +43,11 @@ The playground follows the one flow the API is built around, across two tabs:
 - Submit it (`POST /v1/transcriptions`) and watch the job poll to completion.
 - Read the result as a speaker-separated, timestamped conversation.
 - Copy the job id, or open it straight away under **Your jobs**.
+
+**Summary** and **Tagging**
+- Paste a transcript you already have as text; no audio or transcription job is needed.
+- Submit it (`POST /v1/summarize` or `POST /v1/tag`) and watch the new job poll to completion, then read the summary or tag set.
+- The job also appears under **Your jobs**, with no source transcription.
 
 **Your jobs**
 - A scrollable list on the left shows every job on your account, most recent
@@ -89,8 +94,8 @@ GET    /v1/transcriptions            -> list jobs
 POST   /v1/transcriptions            -> submit audio (multipart), returns job_id
 GET    /v1/transcriptions/{job_id}   -> job status + result when succeeded
 DELETE /v1/transcriptions/{job_id}   -> remove a job (where supported)
-POST   /v1/summarize                 -> summarise a finished transcription
-POST   /v1/tag                       -> tag a finished transcription
+POST   /v1/summarize                 -> summarise a finished transcription or pasted text
+POST   /v1/tag                       -> tag a finished transcription or pasted text
 ```
 
 Construct it with an API key and (optionally) a base URL:
@@ -202,6 +207,12 @@ tags_job = client.create_tags(job.job_id)           # POST /v1/tag
 *_, done = client.poll(tags_job.job_id)
 for category, values in done.tags.tags.items():
     print(category, values)                         # call_reason ['billing_issue']
+```
+
+A transcript you already have as text can be sent instead, with `transcript_text`. Give one or the other, never both:
+
+```python
+summary_job = client.create_summary(transcript_text="Agent: How can I help?\nCustomer: ...")
 ```
 
 `job.type` says which of the three shapes the result carries, and the three
