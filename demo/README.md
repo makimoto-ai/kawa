@@ -52,8 +52,9 @@ The playground follows the one flow the API is built around, across four tabs:
 **Your jobs**
 - A scrollable list on the left shows every job on your account, most recent
   first. Each entry is labelled **Transcription**, **Summary** or **Tags**,
-  colour-coded to match, and any failed job is clearly flagged.
-- The **Job types** badges above the list explain the colours and double as a filter: click one or more to show only those types, and click again to clear. With none selected, every type is shown. Outcome and date filters sit beneath them.
+  colour-coded to match, with an icon for its status: ✓ succeeded,
+  ! failed, … queued, and a spinning ring while processing.
+- The **Job types** badges above the list explain the colours and double as a filter: click one or more to show only those types, and click again to clear. With none selected, every type is shown. Status (succeeded, failed, queued or processing) and date filters sit beneath them.
 - Click a job to open its full detail on the right.
 - Opening a transcription shows the full conversation, with **Summarise** and
   **Tag** options beneath it. Each creates a new job, appears in the list as

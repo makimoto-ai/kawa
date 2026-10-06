@@ -516,12 +516,15 @@ CSS = f"""
 .mk-joblist button.mk-jobrow-unknown {{ border-left-color: var(--mk-muted) !important; }}
 .mk-joblist button.mk-jobrow-unknown::after {{ content: "JOB"; background: var(--mk-muted); }}
 
-/* Outcome is marked at the start of the row, so the rail can be scanned for
-   trouble (or for what finished cleanly) without opening anything. ::after is
-   already the type badge, which is why these lead rather than follow. The
-   marker carries the outcome on its own, so the label never spells it out. */
+/* Status is marked at the start of the row, so the rail can be scanned for
+   trouble (or for what finished cleanly, or is still waiting) without opening
+   anything. ::after is already the type badge, which is why these lead rather
+   than follow. The marker carries the status on its own, so the label never
+   spells it out. */
 .mk-joblist button.mk-jobrow-failed::before,
-.mk-joblist button.mk-jobrow-succeeded::before {{
+.mk-joblist button.mk-jobrow-succeeded::before,
+.mk-joblist button.mk-jobrow-queued::before,
+.mk-joblist button.mk-jobrow-processing::before {{
   display: inline-block; vertical-align: middle;
   margin-right: 7px; position: relative; top: -1px;
   width: 16px; height: 16px; border-radius: 999px;
@@ -530,6 +533,23 @@ CSS = f"""
 }}
 .mk-joblist button.mk-jobrow-failed::before {{ content: "!"; background: var(--mk-bad); }}
 .mk-joblist button.mk-jobrow-succeeded::before {{ content: "\\2713"; background: var(--mk-good); }}
+/* An ellipsis for "waiting its turn". The text after the slash is what a
+   screen reader announces, since the label no longer says "queued". */
+.mk-joblist button.mk-jobrow-queued::before {{
+  content: "\\2026" / "Queued"; background: var(--mk-pending); line-height: 12px;
+}}
+/* A spinning ring for "being worked on"; still for anyone who asks for less
+   motion. Longhands, as the border shorthand did not survive in the page. */
+.mk-joblist button.mk-jobrow-processing::before {{
+  content: "" / "Processing"; background: transparent; box-sizing: border-box;
+  border-width: 2.5px; border-style: solid;
+  border-color: transparent var(--mk-pending) var(--mk-pending) var(--mk-pending);
+  animation: mk-spin 0.9s linear infinite;
+}}
+@keyframes mk-spin {{ to {{ transform: rotate(360deg); }} }}
+@media (prefers-reduced-motion: reduce) {{
+  .mk-joblist button.mk-jobrow-processing::before {{ animation: none; }}
+}}
 
 /* Legend and type filter in one: a checkbox group drawn as the rail's three
    badges. Each checkbox's name is its job type, which picks the colour. Once
@@ -809,6 +829,9 @@ def tags_html(result: TagsResult) -> str:
 # not be resolved, which opening it will settle.
 JOB_TYPE_LABELS = {"transcription": "Transcription", "summary": "Summary", "tags": "Tags", "unknown": "Job"}
 JOB_TYPES = ("transcription", "summary", "tags")
+
+# Statuses shown as an icon at the start of a rail row rather than in words.
+MARKED_STATUSES = ("succeeded", "failed", "queued", "processing")
 
 
 def postprocessing_html(job: Job) -> str:
@@ -1114,19 +1137,19 @@ def row_label(row: dict[str, str]) -> str:
     """What a rail row says, after its type badge."""
     when = (row["created"][:16] or "").replace("T", " ") or "no date"
     what = row["name"] or row["job_id"]
-    suffix = "" if row["status"] in ("succeeded", "failed") else f"  ·  {row['status']}"
+    suffix = "" if row["status"] in MARKED_STATUSES else f"  ·  {row['status']}"
     return f"{what}  ·  {when}{suffix}"
 
 
 def row_classes(row: dict[str, str]) -> list[str]:
-    """Classes for one rail row: its type badge, and its outcome marker.
+    """Classes for one rail row: its type badge, and its status marker.
 
     Both are drawn in CSS rather than written into the button's label, which
-    can only hold plain text. Only the two terminal outcomes get a marker; a
-    job still queued or processing has none, and says so in its label instead.
+    can only hold plain text. Only MARKED_STATUSES get a marker; any other
+    status the API reports has none, and is spelt out in the label instead.
     """
     classes = ["mk-jobrow", f"mk-jobrow-{row['type']}"]
-    if row["status"] in ("succeeded", "failed"):
+    if row["status"] in MARKED_STATUSES:
         classes.append(f"mk-jobrow-{row['status']}")
     return classes
 
@@ -1871,8 +1894,15 @@ def build_app() -> gr.Blocks:
 
                         with gr.Row(equal_height=True):
                             status_filter_dd = gr.Dropdown(
-                                label="Outcome",
-                                choices=[("All", "all"), ("Succeeded", "succeeded"), ("Failed", "failed")],
+                                label="Status",
+                                choices=[
+                                    # Same options and order as makimoto's Logs page.
+                                    ("All", "all"),
+                                    ("Succeeded", "succeeded"),
+                                    ("Failed", "failed"),
+                                    ("Queued", "queued"),
+                                    ("Processing", "processing"),
+                                ],
                                 value="all",
                                 scale=1,
                             )
