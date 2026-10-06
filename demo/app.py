@@ -959,8 +959,9 @@ def _job_filename(job: Job) -> str | None:
     return str(name) if name else None
 
 
-def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, str]:
-    """Fetch one job purely to learn its ``type``.
+def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, dict[str, str]]:
+    """Fetch one job to learn its ``type`` and, for a summary or tags job, its
+    source transcription, which the list endpoint does not report.
 
     Given its own client, and therefore its own ``requests.Session``, because
     these run on a thread pool and a Session is not safe to share. A failure
@@ -968,35 +969,38 @@ def _resolve_type(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     it resolves the type properly.
     """
     try:
-        return job_id, KawaClient(key=token, api_url=api_url).get_transcription(job_id).type
+        job = KawaClient(key=token, api_url=api_url).get_transcription(job_id)
+        return job_id, {"type": job.type, "source": job.source_job_id or ""}
     except (KawaError, requests.RequestException, ValueError):
-        return job_id, "unknown"
+        return job_id, {"type": "unknown", "source": ""}
 
 
 def _rows_for(
-    jobs: list[Job], token: str, api_url: str, types: dict[str, str]
+    jobs: list[Job], token: str, api_url: str, types: dict[str, dict[str, str]]
 ) -> list[dict[str, str]]:
     """Turn one page of jobs into rail rows, labelled by job type.
 
-    Job types are cached for the session (``types`` is updated in place) and a later
-    page or refresh only resolves rows it has not seen before.
+    What ``_resolve_type`` learns is cached for the session (``types`` is updated
+    in place) and a later page or refresh only resolves rows it has not seen before.
     """
     unresolved = [j.job_id for j in jobs if not _job_filename(j) and j.job_id not in types]
     if unresolved:
         with ThreadPoolExecutor(max_workers=min(8, len(unresolved))) as pool:
-            for job_id, kind in pool.map(lambda jid: _resolve_type(token, api_url, jid), unresolved):
-                types[job_id] = kind
+            for job_id, resolved in pool.map(lambda jid: _resolve_type(token, api_url, jid), unresolved):
+                types[job_id] = resolved
 
-    return [
-        {
+    rows = []
+    for job in jobs:
+        resolved = types.get(job.job_id, {})
+        rows.append({
             "job_id": job.job_id,
-            "type": "transcription" if _job_filename(job) else types.get(job.job_id, "unknown"),
+            "type": "transcription" if _job_filename(job) else resolved.get("type", "unknown"),
             "status": job.status,
             "name": _job_filename(job) or "",
             "created": str(job.raw.get("created_at") or job.raw.get("received_at") or ""),
-        }
-        for job in jobs
-    ]
+            "source": resolved.get("source", ""),
+        })
+    return rows
 
 
 def _is_filtered(filters: tuple[list[str], str, str]) -> bool:
@@ -1015,7 +1019,7 @@ def _fill_page(
     client: KawaClient,
     token: str,
     api_url: str,
-    types: dict[str, str],
+    types: dict[str, dict[str, str]],
     cursor: str | None,
     filters: tuple[list[str], str, str],
     want: int = JOBS_PAGE_SIZE,
@@ -1039,11 +1043,11 @@ def _fill_page(
 def list_jobs_view(
     token: str,
     api_url: str,
-    known_types: dict[str, str],
+    known_types: dict[str, dict[str, str]],
     type_filter: list[str] | None = None,
     status_filter: str = "all",
     since_filter: str = "",
-) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
+) -> tuple[list[dict[str, str]], dict[str, dict[str, str]], str, str, str | None, Any, int]:
     """GET /v1/transcriptions - the newest jobs matching the filters.
 
     ``type_filter`` is the job types selected in the legend; none means all.
@@ -1086,14 +1090,14 @@ def list_jobs_view(
 def load_more_jobs_view(
     token: str,
     api_url: str,
-    known_types: dict[str, str],
+    known_types: dict[str, dict[str, str]],
     rows: list[dict[str, str]],
     cursor: str | None,
     total: int,
     type_filter: list[str] | None,
     status_filter: str,
     since_filter: str,
-) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
+) -> tuple[list[dict[str, str]], dict[str, dict[str, str]], str, str, str | None, Any, int]:
     """Another page of matches, appended to what the rail already shows.
 
     Returns: (rows, type_cache, list_status, list_curl, next_cursor, more_btn, total)
@@ -1133,12 +1137,20 @@ def load_more_jobs_view(
     )
 
 
-def row_label(row: dict[str, str]) -> str:
-    """What a rail row says, after its type badge."""
+def row_label(row: dict[str, str], pairs: dict[str, Any] | None = None) -> str:
+    """What a rail row says, after its type badge.
+
+    A summary or tags job also names the transcription it came from, shortened
+    to fit; the detail panel has the full id. The API's ``source_job_id`` comes
+    first, then this browser's record (``pairs``) for jobs that predate it.
+    Jobs made from pasted text have no source, so say nothing.
+    """
     when = (row["created"][:16] or "").replace("T", " ") or "no date"
     what = row["name"] or row["job_id"]
+    source = row.get("source") or (pairs or {}).get("by_result", {}).get(row["job_id"], "")
+    origin = f"  ·  from {source[:8]}…" if source else ""
     suffix = "" if row["status"] in MARKED_STATUSES else f"  ·  {row['status']}"
-    return f"{what}  ·  {when}{suffix}"
+    return f"{what}{origin}  ·  {when}{suffix}"
 
 
 def row_classes(row: dict[str, str]) -> list[str]:
@@ -1423,6 +1435,7 @@ def run_postprocess(
         "status": job.status or "processing",
         "name": "",
         "created": str(job.raw.get("received_at") or job.raw.get("created_at") or ""),
+        "source": source_job_id,
     }
     yield emit(
         status_pill(f"Accepted · {job_id}", "pending"),
@@ -1590,7 +1603,7 @@ def delete_transcript(token: str, api_url: str, job_id: str) -> tuple[str, str]:
     return status_pill("Deleted", "good"), _pretty_json(body)
 
 
-def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, str], str, None, Any, int]:
+def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, dict[str, str]], str, None, Any, int]:
     """Clear the API key and reset the playground.
 
     The recorded pairings are left alone: they are job ids this browser
@@ -1913,8 +1926,8 @@ def build_app() -> gr.Blocks:
                             )
 
                         with gr.Column(elem_classes=["mk-joblist"]):
-                            @gr.render(inputs=[jobs_state])
-                            def render_job_rail(rows: list[dict[str, str]]):
+                            @gr.render(inputs=[jobs_state, pairs_state])
+                            def render_job_rail(rows: list[dict[str, str]], pairs: dict[str, Any]):
                                 if not rows:
                                     gr.HTML(
                                         '<div class="mk-empty">Nothing to show. Refresh to list your '
@@ -1924,7 +1937,7 @@ def build_app() -> gr.Blocks:
                                     return
                                 for row in rows:
                                     gr.Button(
-                                        row_label(row),
+                                        row_label(row, pairs),
                                         variant="secondary",
                                         elem_classes=row_classes(row),
                                     ).click(
