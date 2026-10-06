@@ -531,12 +531,31 @@ CSS = f"""
 .mk-joblist button.mk-jobrow-failed::before {{ content: "!"; background: var(--mk-bad); }}
 .mk-joblist button.mk-jobrow-succeeded::before {{ content: "\\2713"; background: var(--mk-good); }}
 
-/* Legend: the same three badges, so the rail needs no explaining. */
-.mk-legend {{ display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }}
-.mk-legend small {{
-  color: var(--mk-muted); font-size: 11px; text-transform: uppercase;
+/* Legend and type filter in one: a checkbox group drawn as the rail's three
+   badges. Each checkbox's name is its job type, which picks the colour. Once
+   any badge is selected the others dim, and selected ones show a ×. */
+.mk-typefilter {{ margin: 0 0 6px -4px; }}
+/* Padded so the keyboard focus ring is not clipped by the wrapper. */
+.mk-typefilter [data-testid="checkbox-group"] {{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px; }}
+.mk-typefilter [data-testid="checkbox-group"]::before {{
+  content: "Job types"; color: var(--mk-muted); font-size: 11px; text-transform: uppercase;
   letter-spacing: 0.06em; margin-right: 2px;
 }}
+.mk-typefilter [data-testid="checkbox-group"] label {{
+  cursor: pointer; margin: 0; padding: 3px 9px; border: 0 !important; border-radius: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #FFFFFF !important; box-shadow: none !important; transition: opacity 0.12s;
+}}
+.mk-typefilter [data-testid="checkbox-group"] label input {{
+  position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;
+}}
+.mk-typefilter [data-testid="checkbox-group"] label span {{ margin: 0 !important; color: inherit !important; }}
+.mk-typefilter label:has(input[name="transcription"]) {{ background: {TYPE_COLOURS["transcription"]} !important; }}
+.mk-typefilter label:has(input[name="summary"]) {{ background: {TYPE_COLOURS["summary"]} !important; color: #010E39 !important; }}
+.mk-typefilter label:has(input[name="tags"]) {{ background: {TYPE_COLOURS["tags"]} !important; }}
+.mk-typefilter label:has(input:focus-visible) {{ outline: 2px solid var(--mk-violet); outline-offset: 2px; }}
+.mk-typefilter [data-testid="checkbox-group"]:has(input:checked) label:not(:has(input:checked)) {{ opacity: 0.4; }}
+.mk-typefilter label:has(input:checked) span::after {{ content: " \\00D7"; }}
 
 /* Type tag + detail heading -------------------------------------------- */
 .mk-jobhead {{ display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 2px 0 8px; }}
@@ -789,6 +808,7 @@ def tags_html(result: TagsResult) -> str:
 # "unknown" is the playground's own fourth case: a listed job whose type could
 # not be resolved, which opening it will settle.
 JOB_TYPE_LABELS = {"transcription": "Transcription", "summary": "Summary", "tags": "Tags", "unknown": "Job"}
+JOB_TYPES = ("transcription", "summary", "tags")
 
 
 def postprocessing_html(job: Job) -> str:
@@ -956,12 +976,10 @@ def _rows_for(
     ]
 
 
-def _is_filtered(filters: tuple[str, str, str]) -> bool:
-    """Whether any of the (type, status, since) filters narrows."""
+def _is_filtered(filters: tuple[list[str], str, str]) -> bool:
+    """Whether any of the (types, status, since) filters narrows."""
     type_filter, status_filter, since_filter = filters
-    if any(f not in ("", "all") for f in (type_filter, status_filter)):
-        return True
-    return bool((since_filter or "").strip())
+    return bool(type_filter) or status_filter not in ("", "all") or bool((since_filter or "").strip())
 
 
 def _jobs_loaded_pill(total: int, loaded: int, filtered: bool) -> str:
@@ -976,7 +994,7 @@ def _fill_page(
     api_url: str,
     types: dict[str, str],
     cursor: str | None,
-    filters: tuple[str, str, str],
+    filters: tuple[list[str], str, str],
     want: int = JOBS_PAGE_SIZE,
 ) -> tuple[list[dict[str, str]], str | None]:
     """Walk pages from ``cursor`` until ``want`` rows match, or they run out.
@@ -999,16 +1017,18 @@ def list_jobs_view(
     token: str,
     api_url: str,
     known_types: dict[str, str],
-    type_filter: str = "all",
+    type_filter: list[str] | None = None,
     status_filter: str = "all",
     since_filter: str = "",
 ) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
     """GET /v1/transcriptions - the newest jobs matching the filters.
 
+    ``type_filter`` is the job types selected in the legend; none means all.
+
     Returns: (rows, type_cache, list_status, list_curl, next_cursor, more_btn, total)
     """
     types = dict(known_types or {})
-    filters = (type_filter, status_filter, since_filter)
+    filters = (list(type_filter or []), status_filter, since_filter)
     filtered = _is_filtered(filters)
     if not (token or "").strip():
         return (
@@ -1047,7 +1067,7 @@ def load_more_jobs_view(
     rows: list[dict[str, str]],
     cursor: str | None,
     total: int,
-    type_filter: str,
+    type_filter: list[str] | None,
     status_filter: str,
     since_filter: str,
 ) -> tuple[list[dict[str, str]], dict[str, str], str, str, str | None, Any, int]:
@@ -1057,7 +1077,7 @@ def load_more_jobs_view(
     """
     types = dict(known_types or {})
     loaded = list(rows or [])
-    filters = (type_filter, status_filter, since_filter)
+    filters = (list(type_filter or []), status_filter, since_filter)
     filtered = _is_filtered(filters)
     if not cursor:
         return (
@@ -1111,24 +1131,19 @@ def row_classes(row: dict[str, str]) -> list[str]:
     return classes
 
 
-def rail_legend_html() -> str:
-    """The badge for each job type, keyed to the colours used in the rail."""
-    chips = "".join(
-        f'<span class="mk-tag mk-tag-{kind}">{_esc(JOB_TYPE_LABELS[kind])}</span>'
-        for kind in ("transcription", "summary", "tags")
-    )
-    return f'<div class="mk-legend"><small>Job types</small>{chips}</div>'
-
-
 def _rows_matching(
-    rows: list[dict[str, str]], type_filter: str, status_filter: str, since_filter: str
+    rows: list[dict[str, str]], type_filter: list[str], status_filter: str, since_filter: str
 ) -> list[dict[str, str]]:
-    """Which rail rows survive the type/status/since filters, in one pass."""
+    """Which rail rows survive the types/status/since filters, in one pass.
+
+    An empty ``type_filter`` keeps every type. A row whose type could not be
+    resolved ("unknown") only survives that case.
+    """
     since = (since_filter or "").strip()
     return [
         row
         for row in rows
-        if type_filter in ("", "all") or row["type"] == type_filter
+        if not type_filter or row["type"] in type_filter
         if status_filter in ("", "all") or row["status"] == status_filter
         if not since or row["created"][:10] >= since
     ]
@@ -1844,20 +1859,17 @@ def build_app() -> gr.Blocks:
                             )
                             refresh_btn = gr.Button("Refresh", variant="secondary", scale=0, min_width=110)
                         list_status = gr.HTML(status_pill("Refresh to load your jobs.", ""))
-                        gr.HTML(rail_legend_html(), padding=False)
+                        # The legend doubles as the type filter: click badges to
+                        # show only those types; none selected shows all.
+                        type_filter_cb = gr.CheckboxGroup(
+                            label="Job types",
+                            choices=[(JOB_TYPE_LABELS[kind], kind) for kind in JOB_TYPES],
+                            value=[],
+                            container=False,
+                            elem_classes=["mk-typefilter"],
+                        )
 
                         with gr.Row(equal_height=True):
-                            type_filter_dd = gr.Dropdown(
-                                label="Type",
-                                choices=[
-                                    ("All types", "all"),
-                                    ("Transcription", "transcription"),
-                                    ("Summary", "summary"),
-                                    ("Tags", "tags"),
-                                ],
-                                value="all",
-                                scale=1,
-                            )
                             status_filter_dd = gr.Dropdown(
                                 label="Outcome",
                                 choices=[("All", "all"), ("Succeeded", "succeeded"), ("Failed", "failed")],
@@ -2054,7 +2066,7 @@ def build_app() -> gr.Blocks:
             )
 
         # Your jobs.
-        filter_inputs = [type_filter_dd, status_filter_dd, since_filter_box]
+        filter_inputs = [type_filter_cb, status_filter_dd, since_filter_box]
         list_inputs = [token_box, api_url_box, types_state, *filter_inputs]
         list_outputs = [jobs_state, types_state, list_status, list_curl, cursor_state, more_btn, total_state]
         refresh_btn.click(list_jobs_view, inputs=list_inputs, outputs=list_outputs)

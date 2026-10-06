@@ -12,6 +12,7 @@ For the Python SDK's own release history, see its [CHANGELOG.md](https://github.
 
 - `KawaClient.create_summary()`, `create_tags()` and `create_postprocessing()` accept `transcript_text`, so a transcript you already have as text can be summarised or tagged without a transcription job; see [Using `KawaClient`](https://github.com/makimoto-ai/kawa/blob/main/demo/README.md#summarise-or-tag-a-transcription).
 - The Gradio playground has new **Summary** and **Tagging** tabs for pasted transcripts.
+- The playground's job list filters by clicking the job type badges, one or several at a time, in place of the single-choice Type dropdown.
 
 ## 2026-09-16
 
