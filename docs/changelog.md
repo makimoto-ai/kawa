@@ -1,12 +1,17 @@
 # Changelog
 
-*Last updated: 2026-10-01*
+*Last updated: 2026-10-06*
 
 *Notable changes to Kawa, most recent first.* 
 
 For more info, (see the [FAQ](faq.md) and [ROADMAP.md](https://github.com/makimoto-ai/kawa/blob/main/ROADMAP.md) for where things are headed). 
 
 For the Python SDK's own release history, see its [CHANGELOG.md](https://github.com/makimoto-ai/makimoto-python/blob/main/CHANGELOG.md).
+
+## 2026-10-06
+
+- `KawaClient.create_summary()`, `create_tags()` and `create_postprocessing()` accept `transcript_text`, so a transcript you already have as text can be summarised or tagged without a transcription job; see [Using `KawaClient`](https://github.com/makimoto-ai/kawa/blob/main/demo/README.md#summarise-or-tag-a-transcription).
+- The Gradio playground has new **Summary** and **Tagging** tabs for pasted transcripts.
 
 ## 2026-09-16
 
