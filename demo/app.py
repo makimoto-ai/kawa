@@ -519,8 +519,8 @@ CSS = f"""
 /* Status is marked at the start of the row, so the rail can be scanned for
    trouble (or for what finished cleanly, or is still waiting) without opening
    anything. ::after is already the type badge, which is why these lead rather
-   than follow. The marker carries the status on its own, so the label never
-   spells it out. */
+   than follow. A marked status is not repeated in the label; any other 
+   status is spelt out there instead (see row_label). */
 .mk-joblist button.mk-jobrow-failed::before,
 .mk-joblist button.mk-jobrow-succeeded::before,
 .mk-joblist button.mk-jobrow-queued::before,
@@ -828,6 +828,7 @@ def tags_html(result: TagsResult) -> str:
 # "unknown" is the playground's own fourth case: a listed job whose type could
 # not be resolved, which opening it will settle.
 JOB_TYPE_LABELS = {"transcription": "Transcription", "summary": "Summary", "tags": "Tags", "unknown": "Job"}
+# The three real types, in the order the legend and type filter show them.
 JOB_TYPES = ("transcription", "summary", "tags")
 
 # Statuses shown as an icon at the start of a rail row rather than in words.
@@ -1614,7 +1615,7 @@ def disconnect() -> tuple[str, str, list[dict[str, str]], dict[str, dict[str, st
         "",                                     # token box (holds the API key)
         signed_in_html(""),                     # connection line
         [],                                     # job rail
-        {},                                     # resolved-type cache
+        {},                                     # type and source cache
         status_pill("Disconnected.", ""),       # list status
         None,                                   # pagination cursor
         gr.update(visible=False),               # load-more button
@@ -1700,8 +1701,9 @@ def build_app() -> gr.Blocks:
     first_file = str(first_path) if first_path else None
 
     with gr.Blocks(title="Makimoto Kawa · Playground") as app:
-        # The job rail's rows, newest first, and the resolved type of each job
-        # id seen so far (a type never changes, so it is only looked up once).
+        # The job rail's rows, newest first, and the type and source
+        # transcription of each job id seen so far (neither ever changes, so
+        # each job is only looked up once).
         jobs_state = gr.State([])
         types_state = gr.State({})
         # The cursor for the page after the one the rail is showing, or None
