@@ -9,8 +9,8 @@ the transcript.
     POST   /v1/transcriptions            -> submit audio (multipart), returns job_id
     GET    /v1/transcriptions/{job_id}   -> job status + result when succeeded
     DELETE /v1/transcriptions/{job_id}   -> remove a job (where supported)
-    POST   /v1/summarize                 -> summarise a finished transcription
-    POST   /v1/tag                       -> tag a finished transcription
+    POST   /v1/summarize                 -> summarise a finished transcription or pasted text
+    POST   /v1/tag                       -> tag a finished transcription or pasted text
 
 Authenticate every request with an API key, created from the dashboard:
 
@@ -31,6 +31,10 @@ and that is the one to poll:
 >>> summary_job = client.create_summary(final.job_id)
 >>> *_, done = client.poll(summary_job.job_id)
 >>> print(done.summary.summary)
+
+A transcript you already have as text can be sent instead of a job id:
+
+>>> tags_job = client.create_tags(transcript_text="Agent: How can I help?\\nCustomer: ...")
 """
 
 from __future__ import annotations
@@ -380,12 +384,19 @@ class KawaClient:
         """DELETE /v1/transcriptions/{job_id} - remove a job, where supported."""
         return self._request("DELETE", f"/v1/transcriptions/{job_id}")
 
-    def create_postprocessing(self, dimension: str, transcription_job_id: str) -> Job:
+    def create_postprocessing(
+        self,
+        dimension: str,
+        transcription_job_id: str | None = None,
+        *,
+        transcript_text: str | None = None,
+    ) -> Job:
         """POST /v1/summarize or /v1/tag - derive something from a transcript.
 
-        ``dimension`` is ``summary`` or ``tags``. The source must be one of your
-        own *transcription* jobs in status ``succeeded``; no audio is uploaded
-        and nothing is generated synchronously.
+        ``dimension`` is ``summary`` or ``tags``. Give exactly one source: one of
+        your own *transcription* jobs in status ``succeeded``, or
+        ``transcript_text``, a transcript you already have as plain text. No
+        audio is uploaded and nothing is generated synchronously.
 
         The reply is ``202`` with a **new** job id. Poll that id, not the
         source transcription's, and record the pairing yourself: neither the
@@ -400,17 +411,19 @@ class KawaClient:
         if path is None:
             raise ValueError(f"Unknown dimension {dimension!r}; expected one of {sorted(POSTPROCESSING_PATHS)}")
         job_id = (transcription_job_id or "").strip()
-        if not job_id:
-            raise ValueError("A transcription job id is required.")
-        return Job.from_dict(self._request("POST", path, json={"transcription_job_id": job_id}))
+        text = (transcript_text or "").strip()
+        if bool(job_id) == bool(text):
+            raise ValueError("Give exactly one of a transcription job id or transcript text.")
+        body = {"transcription_job_id": job_id} if job_id else {"transcript_text": text}
+        return Job.from_dict(self._request("POST", path, json=body))
 
-    def create_summary(self, transcription_job_id: str) -> Job:
-        """POST /v1/summarize - topic and prose summary for a transcription."""
-        return self.create_postprocessing("summary", transcription_job_id)
+    def create_summary(self, transcription_job_id: str | None = None, *, transcript_text: str | None = None) -> Job:
+        """POST /v1/summarize - topic and prose summary for a transcript."""
+        return self.create_postprocessing("summary", transcription_job_id, transcript_text=transcript_text)
 
-    def create_tags(self, transcription_job_id: str) -> Job:
-        """POST /v1/tag - contact-centre tag set for a transcription."""
-        return self.create_postprocessing("tags", transcription_job_id)
+    def create_tags(self, transcription_job_id: str | None = None, *, transcript_text: str | None = None) -> Job:
+        """POST /v1/tag - contact-centre tag set for a transcript."""
+        return self.create_postprocessing("tags", transcription_job_id, transcript_text=transcript_text)
 
     def poll(
         self,
