@@ -16,7 +16,7 @@ Run it:
     pip install --upgrade -r requirements.txt
     python app.py
 
-Then open the local URL it prints (default http://127.0.0.1:8800).
+Then open the local URL it prints (Gradio's first free port from 7860, or GRADIO_SERVER_PORT when set).
 
 The API contract used here:
 
@@ -24,8 +24,8 @@ The API contract used here:
     POST   /v1/transcriptions            -> submit audio (multipart), returns job_id
     GET    /v1/transcriptions/{job_id}   -> job status + result when succeeded
     DELETE /v1/transcriptions/{job_id}   -> remove a job (where supported)
-    POST   /v1/summarize                 -> summarise a finished transcription
-    POST   /v1/tag                       -> tag a finished transcription
+    POST   /v1/summarize                 -> summarise a finished transcription or pasted text
+    POST   /v1/tag                       -> tag a finished transcription or pasted text
 
 Authenticate every request with an API key, created from the dashboard:
 
@@ -81,6 +81,9 @@ JOBS_PAGE_SIZE = 20
 
 # What one fetch asks the API for while filling that page.
 FETCH_PAGE_SIZE = 100
+
+# Longest pasted transcript the Summary and Tagging tabs will send.
+MAX_TRANSCRIPT_CHARS = 200_000
 
 
 # --------------------------------------------------------------------------- #
@@ -1611,6 +1614,33 @@ DEFAULT_METADATA = '{\n  "source": "playground"\n}'
 # Sample selected on first load; small and clean, so it works everywhere.
 DEFAULT_SAMPLE = "jackhammer.wav"
 
+# The Summary and Tagging tabs, keyed by dimension.
+TEXT_TAB_COPY = {
+    "summary": {
+        "tab": "Summary",
+        "title": "Turn a transcript into a summary.",
+        "description": "Paste a transcript, then watch the job poll to completion. "
+        "Returns a topic and a short prose summary of the call.",
+        "action": "Summarise transcript",
+    },
+    "tags": {
+        "tab": "Tagging",
+        "title": "Turn a transcript into a tag set.",
+        "description": "Paste a transcript, then watch the job poll to completion. "
+        "Returns categories such as call reason and sentiment.",
+        "action": "Tag transcript",
+    },
+}
+
+
+def transcript_count_html(transcript: str) -> str:
+    """Characters that will be sent, against the cap. Blank until there is text."""
+    length = len((transcript or "").strip())
+    if not length:
+        return ""
+    over = ' style="color: var(--mk-bad)"' if length > MAX_TRANSCRIPT_CHARS else ""
+    return f'<div class="mk-hint"{over}>{length:,} / {MAX_TRANSCRIPT_CHARS:,} characters</div>'
+
 
 def build_app() -> gr.Blocks:
     samples = list_samples()
@@ -1758,7 +1788,50 @@ def build_app() -> gr.Blocks:
                             transcribe_raw = gr.Code(value="", language="json", label="Auto-expands on an error, for debugging")
 
             # ============================================================= #
-            # Tab 2 — Your jobs  (rail on the left, one job's detail on the right)
+            # Tabs 2 and 3 — Summary, Tagging  (from pasted transcript text)
+            # ============================================================= #
+            # Each tab's components, by dimension, for the wiring below.
+            text_tabs: dict[str, dict[str, Any]] = {}
+            for dimension, tab in TEXT_TAB_COPY.items():
+                with gr.Tab(tab["tab"], id=dimension):
+                    gr.HTML(
+                        f'<div class="mk-lede">{_esc(tab["title"])}</div>'
+                        f'<div class="mk-lede-sub">{_esc(tab["description"])}</div>'
+                    )
+                    with gr.Row(equal_height=False):
+                        with gr.Column(scale=2):
+                            gr.HTML(
+                                '<div class="mk-endpoint"><span class="mk-method post">POST</span>'
+                                f"<code>{POSTPROCESSING_PATHS[dimension]}</code></div>"
+                                '<div class="mk-hint">Takes transcript text directly, with no audio or '
+                                "prior transcription. The response is a new job to poll.</div>"
+                            )
+                            text_box = gr.Textbox(
+                                label="Transcript",
+                                lines=12,
+                                max_lines=24,
+                                placeholder="Agent: How can I help?\nCustomer: I was charged twice…",
+                            )
+                            count = gr.HTML(transcript_count_html(""))
+                            run_btn = gr.Button(tab["action"], variant="primary")
+                            with gr.Accordion("{ } Equivalent curl", open=False):
+                                text_curl = gr.Code(
+                                    value=curl_postprocess_text(ENV_API_URL, dimension, ""),
+                                    language="shell",
+                                    label="Copy and run from a shell",
+                                )
+                        with gr.Column(scale=3):
+                            text_status = gr.HTML(status_pill("Ready when you are.", ""))
+                            text_result = gr.HTML("")
+                            with gr.Accordion("{ } Raw response (status, headers, body)", open=False) as text_raw_acc:
+                                text_raw = gr.Code(value="", language="json", label="Auto-expands on an error, for debugging")
+                text_tabs[dimension] = {
+                    "text": text_box, "count": count, "button": run_btn, "curl": text_curl,
+                    "status": text_status, "result": text_result, "raw": text_raw, "raw_acc": text_raw_acc,
+                }
+
+            # ============================================================= #
+            # Tab 4 — Your jobs  (rail on the left, one job's detail on the right)
             # ============================================================= #
             with gr.Tab("Your jobs", id="jobs"):
                 with gr.Row(equal_height=False):
@@ -1851,9 +1924,9 @@ def build_app() -> gr.Blocks:
                             ),
                         )
                         source_note = gr.HTML(
-                            '<div class="mk-empty">Source transcription unknown. The job was created '
-                            "before the API began recording where a summary or tags job came from, or "
-                            "by another client, and this browser has no record of it either.</div>",
+                            '<div class="mk-empty">No source transcription. Either the job was made '
+                            "from pasted text, which has none, or it was created before the API began "
+                            "recording sources, by a client this browser has no record of.</div>",
                             visible=False,
                         )
                         detail_status = gr.HTML("")
@@ -1961,6 +2034,25 @@ def build_app() -> gr.Blocks:
             outputs=[transcribe_status, transcript_chat, transcribe_metrics, transcribe_raw, job_id_out, transcribe_raw_acc],
         )
 
+        # Summary and Tagging tabs. Default arguments, not closures over the
+        # loop variable, so each tab keeps its own dimension.
+        for dimension, parts in text_tabs.items():
+            parts["text"].input(
+                lambda text, api_url, d=dimension: (transcript_count_html(text), curl_postprocess_text(api_url, d, text)),
+                inputs=[parts["text"], api_url_box],
+                outputs=[parts["count"], parts["curl"]],
+            )
+            api_url_box.change(
+                lambda text, api_url, d=dimension: curl_postprocess_text(api_url, d, text),
+                inputs=[parts["text"], api_url_box],
+                outputs=[parts["curl"]],
+            )
+            parts["button"].click(
+                TEXT_HANDLERS[dimension],
+                inputs=[parts["text"], token_box, api_url_box, jobs_state],
+                outputs=[parts["status"], parts["result"], parts["raw"], parts["raw_acc"], jobs_state],
+            )
+
         # Your jobs.
         filter_inputs = [type_filter_dd, status_filter_dd, since_filter_box]
         list_inputs = [token_box, api_url_box, types_state, *filter_inputs]
@@ -2011,7 +2103,7 @@ def build_app() -> gr.Blocks:
 if __name__ == "__main__":
     host = os.getenv("GRADIO_SERVER_NAME", "127.0.0.1")
     # Honour GRADIO_SERVER_PORT when set; otherwise pass None so Gradio scans
-    # for a free port instead of failing when 8800 is in use.
+    # for a free port from 7860 instead of failing on a busy one.
     port_env = os.getenv("GRADIO_SERVER_PORT")
     port = int(port_env) if port_env else None
     build_app().queue().launch(
@@ -2021,5 +2113,7 @@ if __name__ == "__main__":
         theme=make_theme(),
         css=CSS,
         head=HEAD,
-        allowed_paths=[str(ROOT_DIR), "/private/tmp", "/tmp"],
+        # Only the samples, so they can load into the audio player. Anything
+        # wider is served to whoever can reach the port, .env included.
+        allowed_paths=[str(ENV_SAMPLE_DIR)],
     )
