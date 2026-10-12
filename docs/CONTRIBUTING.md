@@ -37,8 +37,9 @@ pip install -r docs/requirements.txt
 mkdocs serve
 ```
 
-Open the URL it prints (typically `http://127.0.0.1:8000/kawa/`, matching the `site_url` in `mkdocs.yml`). The server watches `docs/` and `mkdocs.yml`
-and reloads on save.
+Open the URL it prints (typically `http://127.0.0.1:8000/`; the site serves
+from the root because `site_url` in `mkdocs.yml` has no sub-path). The server
+watches `docs/`, `overrides/` and `mkdocs.yml` and reloads on save.
 
 ## Previewing a pull request's changes
 
@@ -54,7 +55,7 @@ a local static server, for example:
 python -m http.server 8000
 ```
 
-and open `http://localhost:8000/kawa/` in your browser. Opening `index.html`
+and open `http://localhost:8000/` in your browser. Opening `index.html`
 directly (via `file://`) won't navigate between pages correctly, MkDocs
 generates directory-style URLs that only resolve through an actual server.
 
