@@ -1,3 +1,7 @@
+---
+description: How to contribute to the Kawa documentation site.
+---
+
 # Contributing to the Documentation
 
 *Last updated: 2026-08-26*

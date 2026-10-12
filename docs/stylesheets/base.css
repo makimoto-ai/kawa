@@ -1,0 +1,198 @@
+/* Base: page, reading typography, links, code and tables, following
+   makimoto's .mk-prose (src/styles/marketing.css). */
+
+html {
+  background-color: var(--mk-navy);
+  scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+  scrollbar-width: thin;
+}
+
+body {
+  /* Raleway defaults to old-style figures; docs are full of numbers. */
+  font-variant-numeric: lining-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reading measure: 40em of 18px text is makimoto's 720px column. */
+.md-typeset {
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+.md-content__inner {
+  max-width: 40em;
+}
+
+/* Headings */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  color: #fff;
+  text-wrap: balance;
+}
+
+.md-typeset h1 {
+  font-size: clamp(1.8em, 1.5em + 1.2vw, 2.4em);
+  font-weight: 800;
+  letter-spacing: -0.012em;
+  line-height: 1.08;
+  margin-bottom: 0.6em;
+}
+
+.md-typeset h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin-top: 2.2em;
+}
+
+.md-typeset h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 1.8em;
+}
+
+.md-typeset h4 {
+  font-weight: 700;
+}
+
+/* The "Last updated" line under each page title. */
+.md-typeset h1 + p > em:only-child {
+  color: var(--mk-text-muted);
+  font-size: 0.9em;
+}
+
+/* Links: sky with a faint underline that firms up and turns white on hover. */
+.md-typeset a:not(.headerlink):not(.md-button) {
+  color: var(--mk-sky);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgb(118 198 255 / 0.55);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: color 160ms var(--mk-ease-out-soft), text-decoration-color 160ms var(--mk-ease-out-soft);
+}
+
+.md-typeset a:not(.headerlink):not(.md-button):hover {
+  color: #fff;
+  text-decoration-color: currentColor;
+}
+
+/* Inline code inside a link keeps the link colour. */
+.md-typeset a code {
+  color: inherit;
+}
+
+.md-typeset .headerlink {
+  color: rgb(255 255 255 / 0.32);
+}
+
+.md-typeset ul li::marker,
+.md-typeset ol li::marker {
+  color: var(--mk-sky);
+}
+
+.md-typeset strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.md-typeset blockquote {
+  border-left: 2px solid rgb(118 198 255 / 0.55);
+  color: var(--mk-text-muted);
+}
+
+.md-typeset hr {
+  border-bottom-color: var(--mk-hairline);
+}
+
+/* Code */
+.md-typeset code {
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
+}
+
+.md-typeset pre > code {
+  border: 1px solid var(--mk-hairline);
+  border-radius: var(--mk-radius-code);
+  font-size: 0.95em;
+  line-height: 1.7;
+  padding: 1.1em 1.25em;
+  tab-size: 2;
+}
+
+.md-typeset .highlight {
+  border-radius: var(--mk-radius-code);
+}
+
+/* Copy button: quiet until the code block is hovered or focused. */
+.md-code__nav {
+  background-color: transparent;
+  border-radius: var(--mk-radius-control);
+  right: 0.5em;
+  top: 0.5em;
+}
+
+.md-code__button {
+  color: rgb(255 255 255 / 0.55);
+}
+
+.md-code__button:hover,
+.md-code__button:focus-visible {
+  color: #fff;
+}
+
+/* Tables */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--mk-hairline);
+  border-radius: var(--mk-radius-note);
+  font-size: 0.72rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Keep field names such as received_at whole rather than split mid-word. */
+.md-typeset table:not([class]) td:first-child code {
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--mk-mist);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Focus: makimoto's white ring, on every interactive element. */
+[data-md-color-scheme] :is(a, button, summary, label, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Skip link: white pill with navy text when it receives focus. */
+.md-skip {
+  background-color: #fff;
+  border-radius: var(--mk-radius-control);
+  color: var(--mk-navy);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.5rem 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

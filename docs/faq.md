@@ -1,3 +1,7 @@
+---
+description: "Answers to common questions about Kawa: audio formats, limits, quota and more."
+---
+
 # FAQ
 
 *Last updated: 2026-09-15*

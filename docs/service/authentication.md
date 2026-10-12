@@ -1,3 +1,7 @@
+---
+description: How API keys work for the Kawa transcription API, including lifetime, rotation and beta versus production access.
+---
+
 # Authentication
 
 *Last updated: 2026-09-16*

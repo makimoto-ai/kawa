@@ -1,0 +1,99 @@
+/* Brand tokens, copied from makimoto's src/styles/brand-tokens.css so the
+   docs read as part of makimoto.ai. Navy carries every surface; purple and
+   cyan are accents only and are never used as a large fill. */
+:root {
+  --mk-navy:        #010e39;
+  --mk-navy-900:    #010a2b;
+  --mk-navy-800:    #061751;
+  --mk-navy-700:    #0b2168;
+  --mk-deep-blue:   #183db2;
+  --mk-purple:      #6200ed;
+  --mk-sky:         #76c6ff;
+  --mk-cyan:        #00f6ff;
+  --mk-cyan-lockup: #19d2d9;
+  --mk-lilac:       #c9b6ff;
+
+  /* "Mist" is makimoto's recessed surface once re-themed for dark pages. */
+  --mk-mist:        rgb(1 10 43 / 0.78);
+  --mk-text:        rgb(222 229 248 / 0.88);
+  --mk-text-muted:  rgb(255 255 255 / 0.65);
+  --mk-hairline:    rgb(255 255 255 / 0.1);
+
+  --mk-radius-control: 10px;
+  --mk-radius-note:    12px;
+  --mk-radius-code:    14px;
+  --mk-radius-frame:   18px;
+  --mk-radius-card:    20px;
+
+  --mk-ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  --md-text-font: "Raleway";
+  --md-code-font: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono";
+
+  color-scheme: dark;
+}
+
+/* Map the brand onto Material's slate scheme. Same specificity as Material's
+   palette stylesheet, which loads earlier, so these win. */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        var(--mk-navy);
+  --md-primary-fg-color--light: var(--mk-navy-700);
+  --md-primary-fg-color--dark:  var(--mk-navy-900);
+  --md-primary-bg-color:        #fff;
+  --md-primary-bg-color--light: rgb(255 255 255 / 0.7);
+
+  /* White, not cyan: makimoto links and controls brighten to white on hover
+     and focus. Cyan is kept for the active "On this page" rail only. */
+  --md-accent-fg-color:              #fff;
+  --md-accent-fg-color--transparent: rgb(255 255 255 / 0.08);
+  --md-accent-bg-color:              var(--mk-navy);
+
+  --md-default-bg-color:           var(--mk-navy);
+  --md-default-bg-color--light:    rgb(1 14 57 / 0.7);
+  --md-default-bg-color--lighter:  rgb(1 14 57 / 0.3);
+  --md-default-bg-color--lightest: rgb(1 14 57 / 0.12);
+  --md-default-fg-color:           var(--mk-text);
+  --md-default-fg-color--light:    var(--mk-text-muted);
+  --md-default-fg-color--lighter:  rgb(255 255 255 / 0.32);
+  --md-default-fg-color--lightest: rgb(255 255 255 / 0.14);
+
+  --md-typeset-color:       var(--mk-text);
+  --md-typeset-a-color:     var(--mk-sky);
+  --md-typeset-mark-color:  rgb(118 198 255 / 0.25);
+  --md-typeset-table-color: var(--mk-hairline);
+  --md-typeset-table-color--light: rgb(255 255 255 / 0.03);
+
+  --md-admonition-bg-color: var(--mk-mist);
+  --md-admonition-fg-color: var(--mk-text);
+
+  --md-code-bg-color:          var(--mk-navy-900);
+  --md-code-bg-color--light:   rgb(1 10 43 / 0.9);
+  --md-code-bg-color--lighter: rgb(1 10 43 / 0.6);
+  --md-code-fg-color:          rgb(255 255 255 / 0.88);
+
+  /* Syntax colours follow makimoto's .tk-* token palette. */
+  --md-code-hl-color:             var(--mk-sky);
+  --md-code-hl-color--light:      rgb(118 198 255 / 0.12);
+  --md-code-hl-comment-color:     rgb(255 255 255 / 0.55);
+  --md-code-hl-string-color:      var(--mk-sky);
+  --md-code-hl-keyword-color:     var(--mk-lilac);
+  --md-code-hl-special-color:     var(--mk-lilac);
+  --md-code-hl-number-color:      var(--mk-cyan-lockup);
+  --md-code-hl-constant-color:    var(--mk-cyan-lockup);
+  --md-code-hl-name-color:        rgb(255 255 255 / 0.88);
+  --md-code-hl-function-color:    #fff;
+  --md-code-hl-variable-color:    #fff;
+  --md-code-hl-operator-color:    rgb(255 255 255 / 0.7);
+  --md-code-hl-punctuation-color: rgb(255 255 255 / 0.7);
+  --md-code-hl-generic-color:     var(--mk-sky);
+
+  --md-footer-bg-color:       var(--mk-navy-900);
+  --md-footer-bg-color--dark: var(--mk-navy-900);
+  --md-footer-fg-color:          #fff;
+  --md-footer-fg-color--light:   rgb(255 255 255 / 0.7);
+  --md-footer-fg-color--lighter: rgb(255 255 255 / 0.6);
+
+  --md-shadow-z1: none;
+  --md-shadow-z2: 0 30px 80px -40px rgb(0 0 0 / 0.6);
+  --md-shadow-z3: 0 30px 80px -40px rgb(0 0 0 / 0.6);
+}

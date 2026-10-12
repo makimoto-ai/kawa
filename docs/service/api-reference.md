@@ -1,3 +1,7 @@
+---
+description: Every Kawa API endpoint, with request and response formats, error codes and the OpenAPI specification.
+---
+
 # API Reference
 
 *Last updated: 2026-10-01*

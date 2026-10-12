@@ -1,3 +1,7 @@
+---
+description: Create a Makimoto account, generate an API key and submit your first transcription with the Kawa API.
+---
+
 # Getting Started
 
 *Last updated: 2026-10-01*
