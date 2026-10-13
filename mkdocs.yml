@@ -54,6 +54,11 @@ plugins:
             show_source: false
             members_order: source
 
+# Expands `::: openapi METHOD /path` directives into reference tables
+# generated from docs/openapi.json (see the module docstring).
+hooks:
+  - hooks/openapi_reference.py
+
 exclude_docs: |
   .venv/
   includes/
