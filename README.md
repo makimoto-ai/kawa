@@ -12,7 +12,7 @@
    <a href="https://github.com/makimoto-ai/kawa"><img src="https://img.shields.io/badge/Status-Live-brightgreen.svg" alt="Status: LIVE"/></a>
    <a href="docs/service/authentication.md"><img src="https://img.shields.io/badge/API-docs-6200EB.svg" alt="API Docs" /></a>
    <a href="https://www.makimoto.ai/?utm_source=github&utm_medium=kawa&utm_id=g002"><img src="https://img.shields.io/badge/Website-Makimoto-blue?logo=googlechrome&logoColor=white" alt="Website" /></a>
-   <a href="https://discord.gg/EwVQxPCb5"><img src="https://img.shields.io/discord/1352140878650540062?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord" /></a>
+   <a href="https://discord.gg/rdFVTa8SmX"><img src="https://img.shields.io/discord/1352140878650540062?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord" /></a>
    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-orange.svg" alt="MIT license" /></a>
    <a href="#-data-residency-and-sovereignty"><img src="https://img.shields.io/badge/Made%20in-Singapore-red.svg" alt="Made in Singapore" /></a>
 </p>
@@ -120,7 +120,7 @@ Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Al
 - 📧 **Email:** [contact@makimoto.ai](mailto:contact@makimoto.ai)
 - 🐛 **Issues:** [GitHub Issues](https://github.com/makimoto-ai/kawa/issues) for bugs and feature requests
 - 🔒 **Security:** see [SECURITY.md](SECURITY.md); please do not open public issues for vulnerabilities
-- 💬 **Discord:** https://discord.gg/EwVQxPCb5
+- 💬 **Discord:** https://discord.gg/rdFVTa8SmX
 
 ## 📄 Licence
 
