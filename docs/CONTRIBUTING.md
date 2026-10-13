@@ -30,6 +30,13 @@ Change it the same way you'd change any other file here: a pull request against 
     
     To pick up SDK changes, a code owner must run the CI workflow manually via `workflow_dispatch` (which still rebuilds against whatever `ref:` is currently pinned, so the `ref:` bump has to happen first).
 
+## The API reference
+
+Most of [`docs/service/api-reference.md`](service/api-reference.md) is generated from `docs/openapi.json` at build time, by the hook in `hooks/openapi_reference.py`. A line `::: openapi POST /v1/summarize` on its own is replaced with that endpoint's heading, description, parameter, field and status code tables. The examples, limits and other guidance written by hand go under it.
+
+- To change a generated table, change the spec, not the page. `docs/openapi.json` is copied by hand from `openapi.public.json` in the `makimoto-api` repository; descriptions belong there.
+- The build fails if a directive names an endpoint the spec doesn't have, and warns (failing CI) if the spec has an endpoint no page renders. After copying in a new spec, add a directive for any new endpoint.
+
 ## Previewing locally
 
 ```bash

@@ -18,7 +18,7 @@ The limit is ≤ 10 MB per upload; larger files return `413 Payload Too Large`.
 
 ### How do I check my remaining quota?
 
-You may check your remaining quota through the developer portal at [makimoto.ai](https://makimoto.ai). `GET /v1/transcriptions/usage` reports the same figures, but it's authenticated with your dashboard sign-in session, not an API key, so an API-key client can't call it directly; track quota from the `error.details` on a `429 QUOTA_EXCEEDED` response instead. See the [note on `GET /v1/transcriptions/usage`](service/api-reference.md#get-v1transcriptionsusage) for detail.
+You may check your remaining quota through the developer portal at [makimoto.ai](https://makimoto.ai). 
 
 The free allowance is 1,000 minutes of audio per month.
 
