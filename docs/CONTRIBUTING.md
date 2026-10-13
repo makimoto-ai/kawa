@@ -34,8 +34,12 @@ Change it the same way you'd change any other file here: a pull request against 
 
 ```bash
 pip install -r docs/requirements.txt
-mkdocs serve
+mkdocs serve --no-strict
 ```
+
+The Python SDK pages are imported only in CI builds, so locally they are
+missing and MkDocs warns about them; `--no-strict` lets the rest of the site
+preview anyway.
 
 Open the URL it prints (typically `http://127.0.0.1:8000/`; the site serves
 from the root because `site_url` in `mkdocs.yml` has no sub-path). The server
@@ -67,7 +71,9 @@ Both the PR check and the deploy step run:
 mkdocs build --strict
 ```
 
-`--strict` turns warnings, most commonly a broken internal link or a `nav` entry in `mkdocs.yml` pointing at a file that doesn't exist, into build failures. Reproduce it locally with the command above; the error message names the offending file and link. 
+`--strict` turns warnings, most commonly a broken internal link or a `nav` entry in `mkdocs.yml` pointing at a file that doesn't exist, into build failures. Reproduce it locally with the command above; the error message names the offending file and link.
+
+Locally, the build will always report warnings about `sdks/python/` pages, because those are imported only in CI (see [Previewing locally](#previewing-locally)). Ignore those and look for any other warning: that is the one failing the CI build.
 
 A build that fails before that step (dependency install, YAML parsing) usually means a syntax error in `mkdocs.yml` or `docs/requirements.txt`; check the failed run's log under the repository's **Actions** tab for the exact step and error.
 
