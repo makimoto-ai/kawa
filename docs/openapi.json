@@ -243,46 +243,6 @@
         }
       }
     },
-    "/v1/transcriptions/usage": {
-      "get": {
-        "tags": [
-          "Transcriptions"
-        ],
-        "summary": "Get the caller's transcription usage",
-        "description": "Returns the caller's transcription minute quota: total limit, minutes already consumed, and minutes remaining. Reflects the same quota state enforced on upload.\n\nUnlike every other operation in this API, this one is authenticated with the caller's dashboard sign-in session (see `dashboardAuth`), not an API key: it's a status view for the logged-in dashboard, not part of the API-key surface external clients use.",
-        "operationId": "getTranscriptionUsage",
-        "security": [
-          {
-            "dashboardAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The caller's quota state.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UsageResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid dashboard session.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalError"
-          }
-        }
-      }
-    },
     "/v1/transcriptions/{job_id}": {
       "parameters": [
         {
