@@ -34,7 +34,7 @@ The API key is missing, invalid, expired, or revoked. See [Key Lifetime and Rota
 
 ### Why am I getting a `429`?
 
-The account's monthly transcription-minute quota has been exceeded (`QUOTA_EXCEEDED`). The error's `details` carry `limit_minutes`, `used_minutes`, and `file_minutes`, so you don't need a separate call to see how much is remaining. `GET /v1/transcriptions/usage` reports the same figures, but only to a dashboard sign-in session, not an API key; see [How do I check my remaining quota?](#how-do-i-check-my-remaining-quota) above.
+The account's monthly transcription-minute quota has been exceeded (`QUOTA_EXCEEDED`). The error's `details` carry `limit_minutes`, `used_minutes`, and `file_minutes`, so you don't need a separate call to see how much is remaining. See [How do I check my remaining quota?](#how-do-i-check-my-remaining-quota) above.
 
 ### Why am I getting a `415`?
 
