@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{#- The site is dark-only: match the browser chrome to the navy page and
+    preload the self-hosted Raleway so text does not reflow on first paint. -#}
+{% block extrahead %}
+  <meta name="theme-color" content="#010e39">
+  <meta name="color-scheme" content="dark">
+  <link rel="preload" href="{{ 'assets/fonts/raleway-latin-wght-normal.woff2' | url }}" as="font" type="font/woff2" crossorigin>
+{% endblock %}

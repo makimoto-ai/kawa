@@ -1,3 +1,7 @@
+---
+description: "Answers to common questions about Kawa: audio formats, limits, quota and more."
+---
+
 # FAQ
 
 *Last updated: 2026-09-15*
@@ -14,7 +18,7 @@ The limit is ≤ 10 MB per upload; larger files return `413 Payload Too Large`.
 
 ### How do I check my remaining quota?
 
-You may check your remaining quota through the developer portal at [makimoto.ai](https://makimoto.ai). `GET /v1/transcriptions/usage` reports the same figures, but it's authenticated with your dashboard sign-in session, not an API key, so an API-key client can't call it directly; track quota from the `error.details` on a `429 QUOTA_EXCEEDED` response instead. See the [note on `GET /v1/transcriptions/usage`](service/api-reference.md#get-v1transcriptionsusage) for detail.
+You may check your remaining quota through the developer portal at [makimoto.ai](https://makimoto.ai). 
 
 The free allowance is 1,000 minutes of audio per month.
 
@@ -30,7 +34,7 @@ The API key is missing, invalid, expired, or revoked. See [Key Lifetime and Rota
 
 ### Why am I getting a `429`?
 
-The account's monthly transcription-minute quota has been exceeded (`QUOTA_EXCEEDED`). The error's `details` carry `limit_minutes`, `used_minutes`, and `file_minutes`, so you don't need a separate call to see how much is remaining. `GET /v1/transcriptions/usage` reports the same figures, but only to a dashboard sign-in session, not an API key; see [How do I check my remaining quota?](#how-do-i-check-my-remaining-quota) above.
+The account's monthly transcription-minute quota has been exceeded (`QUOTA_EXCEEDED`). The error's `details` carry `limit_minutes`, `used_minutes`, and `file_minutes`, so you don't need a separate call to see how much is remaining. See [How do I check my remaining quota?](#how-do-i-check-my-remaining-quota) above.
 
 ### Why am I getting a `415`?
 

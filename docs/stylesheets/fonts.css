@@ -1,0 +1,19 @@
+/* Raleway, the makimoto.ai text face, self-hosted as a variable font (latin
+   subset, from @fontsource-variable/raleway 5.3.0, SIL OFL 1.1: see
+   assets/fonts/OFL.txt). Self-hosting keeps visitors' IP addresses away from
+   Google Fonts before they have answered the cookie banner. */
+@font-face {
+  font-family: "Raleway";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/raleway-latin-wght-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Raleway";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/raleway-latin-wght-italic.woff2") format("woff2");
+}

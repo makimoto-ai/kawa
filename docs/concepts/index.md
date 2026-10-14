@@ -1,3 +1,7 @@
+---
+description: How Kawa's composable transcription pipeline works, and the terms used throughout the documentation.
+---
+
 # How It Works
 
 *Last updated: 2026-09-16*

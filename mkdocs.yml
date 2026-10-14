@@ -27,25 +27,17 @@ nav:
 
 theme:
   name: material
-  logo: assets/logo.png
-  favicon: assets/logo.png
-  font:
-    text: Inter
+  custom_dir: overrides
+  logo: assets/brand/logo-gradient-on-dark.svg
+  favicon: assets/brand/mark-gradient.svg
+  # Raleway is self-hosted (see stylesheets/fonts.css) so no request goes to
+  # Google Fonts before the visitor has answered the cookie banner.
+  font: false
+  # Dark-only, matching makimoto.ai. Colours live in stylesheets/tokens.css.
   palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: custom
-      accent: custom
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: custom
-      accent: custom
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
+    scheme: slate
+    primary: custom
+    accent: custom
   features:
     - navigation.sections
     - navigation.top
@@ -62,18 +54,29 @@ plugins:
             show_source: false
             members_order: source
 
+# Expands `::: openapi METHOD /path` directives into reference tables
+# generated from docs/openapi.json (see the module docstring).
+hooks:
+  - hooks/openapi_reference.py
+
 exclude_docs: |
   .venv/
   includes/
 
 extra_css:
-  - stylesheets/extra.css
+  - stylesheets/fonts.css
+  - stylesheets/tokens.css
+  - stylesheets/base.css
+  - stylesheets/components.css
 
 markdown_extensions:
   - admonition
+  - attr_list
+  - md_in_html
   - tables
   - toc:
       permalink: true
+      title: On this page
   - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.snippets:

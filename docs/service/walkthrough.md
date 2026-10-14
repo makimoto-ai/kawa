@@ -1,3 +1,7 @@
+---
+description: A worked curl walkthrough of the Kawa API, from API key to finished transcript.
+---
+
 # Walkthrough
 
 *Last updated: 2026-09-16*

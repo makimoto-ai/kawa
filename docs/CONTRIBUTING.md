@@ -1,3 +1,7 @@
+---
+description: How to contribute to the Kawa documentation site.
+---
+
 # Contributing to the Documentation
 
 *Last updated: 2026-08-26*
@@ -26,15 +30,27 @@ Change it the same way you'd change any other file here: a pull request against 
     
     To pick up SDK changes, a code owner must run the CI workflow manually via `workflow_dispatch` (which still rebuilds against whatever `ref:` is currently pinned, so the `ref:` bump has to happen first).
 
+## The API reference
+
+Most of [`docs/service/api-reference.md`](service/api-reference.md) is generated from `docs/openapi.json` at build time, by the hook in `hooks/openapi_reference.py`. A line `::: openapi POST /v1/summarize` on its own is replaced with that endpoint's heading, description, parameter, field and status code tables. The examples, limits and other guidance written by hand go under it.
+
+- To change a generated table, change the spec, not the page. `docs/openapi.json` is copied by hand from `openapi.public.json` in the `makimoto-api` repository; descriptions belong there.
+- The build fails if a directive names an endpoint the spec doesn't have, and warns (failing CI) if the spec has an endpoint no page renders. After copying in a new spec, add a directive for any new endpoint.
+
 ## Previewing locally
 
 ```bash
 pip install -r docs/requirements.txt
-mkdocs serve
+mkdocs serve --no-strict
 ```
 
-Open the URL it prints (typically `http://127.0.0.1:8000/kawa/`, matching the `site_url` in `mkdocs.yml`). The server watches `docs/` and `mkdocs.yml`
-and reloads on save.
+The Python SDK pages are imported only in CI builds, so locally they are
+missing and MkDocs warns about them; `--no-strict` lets the rest of the site
+preview anyway.
+
+Open the URL it prints (typically `http://127.0.0.1:8000/`; the site serves
+from the root because `site_url` in `mkdocs.yml` has no sub-path). The server
+watches `docs/`, `overrides/` and `mkdocs.yml` and reloads on save.
 
 ## Previewing a pull request's changes
 
@@ -50,7 +66,7 @@ a local static server, for example:
 python -m http.server 8000
 ```
 
-and open `http://localhost:8000/kawa/` in your browser. Opening `index.html`
+and open `http://localhost:8000/` in your browser. Opening `index.html`
 directly (via `file://`) won't navigate between pages correctly, MkDocs
 generates directory-style URLs that only resolve through an actual server.
 
@@ -62,7 +78,9 @@ Both the PR check and the deploy step run:
 mkdocs build --strict
 ```
 
-`--strict` turns warnings, most commonly a broken internal link or a `nav` entry in `mkdocs.yml` pointing at a file that doesn't exist, into build failures. Reproduce it locally with the command above; the error message names the offending file and link. 
+`--strict` turns warnings, most commonly a broken internal link or a `nav` entry in `mkdocs.yml` pointing at a file that doesn't exist, into build failures. Reproduce it locally with the command above; the error message names the offending file and link.
+
+Locally, the build will always report warnings about `sdks/python/` pages, because those are imported only in CI (see [Previewing locally](#previewing-locally)). Ignore those and look for any other warning: that is the one failing the CI build.
 
 A build that fails before that step (dependency install, YAML parsing) usually means a syntax error in `mkdocs.yml` or `docs/requirements.txt`; check the failed run's log under the repository's **Actions** tab for the exact step and error.
 

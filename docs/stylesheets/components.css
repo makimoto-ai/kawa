@@ -1,0 +1,354 @@
+/* Components: header, navigation, callouts, buttons, cards and footer,
+   restyled after makimoto's marketing components. */
+
+/* Header: frosted navy, with a soft fade below it once the page scrolls
+   instead of a hard shadow (makimoto's .mk-header). */
+.md-header {
+  background-color: rgb(1 14 57 / 0.82);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+.md-header,
+.md-header--shadow {
+  box-shadow: none;
+}
+
+.md-header::after {
+  background: linear-gradient(180deg, rgb(1 14 57 / 0.55), transparent);
+  content: "";
+  height: 1.75rem;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  transition: opacity 240ms var(--mk-ease-out-soft);
+}
+
+.md-header--shadow::after {
+  opacity: 1;
+}
+
+@media screen and (max-width: 76.1875em) {
+  .md-header {
+    background-color: rgb(1 14 57 / 0.94);
+  }
+}
+
+/* The lockup is 2767:707; at 1.5rem tall it is about 117px wide, close to
+   the brand's 120px minimum, so give it 1.55rem. */
+.md-header__button.md-logo img {
+  height: 1.55rem;
+}
+
+.md-nav__title .md-nav__button.md-logo img {
+  height: 2rem;
+}
+
+.md-header__topic:first-child {
+  font-weight: 700;
+}
+
+/* Search field: makimoto's search input (.mk-blog-search). */
+@media screen and (min-width: 60em) {
+  .md-search__form {
+    background-color: rgb(1 10 43 / 0.6);
+    border: 1px solid rgb(255 255 255 / 0.2);
+    border-radius: 12px;
+    height: 1.9rem;
+  }
+
+  .md-search__form:hover {
+    background-color: rgb(1 10 43 / 0.8);
+  }
+
+  .md-search__input {
+    color: #fff;
+    font-size: 0.75rem;
+  }
+
+  .md-search__input::placeholder {
+    color: rgb(255 255 255 / 0.6);
+  }
+
+  .md-search__icon[for="__search"] {
+    color: rgb(255 255 255 / 0.6);
+  }
+
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__form {
+    border-color: #fff;
+    border-radius: 12px 12px 0 0;
+  }
+}
+
+/* Primary navigation (left sidebar). */
+.md-sidebar .md-nav {
+  font-size: 0.75rem;
+}
+
+.md-nav--primary .md-nav__link {
+  color: rgb(255 255 255 / 0.72);
+}
+
+.md-nav--primary .md-nav__link[href]:hover,
+.md-nav--primary .md-nav__link:hover {
+  color: #fff;
+}
+
+.md-nav--primary .md-nav__item .md-nav__link--active {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Section headings in the sidebar (Service, SDKs). */
+.md-nav--primary .md-nav__item--section > .md-nav__link {
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* "On this page": a thin rail that turns cyan beside the current section
+   (makimoto's .mk-toc). Nested items indent within the same rail. */
+.md-nav--secondary .md-nav__title {
+  color: var(--mk-sky);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+[dir] .md-nav--secondary .md-nav,
+[dir] .md-nav--secondary .md-nav__list,
+[dir] .md-nav--secondary .md-nav__item {
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.md-nav--secondary .md-nav__link {
+  border-left: 2px solid rgb(255 255 255 / 0.14);
+  color: rgb(255 255 255 / 0.65);
+  margin-top: 0;
+  padding: 0.3rem 0 0.3rem 0.8rem;
+}
+
+[dir] .md-nav--secondary .md-nav .md-nav__link {
+  padding-left: 1.6rem;
+}
+
+.md-nav--secondary .md-nav__link:hover {
+  color: #fff;
+}
+
+.md-nav--secondary .md-nav__link--active {
+  border-left-color: var(--mk-cyan);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Callouts: makimoto's note (.mk-note), a coloured left rail on a recessed
+   surface. Note and tip use sky; any other type keeps Material's own hue on
+   the rail, so no new brand colours are introduced. */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--mk-radius-note);
+  border-width: 0 0 0 3px;
+  font-size: 0.8rem;
+  padding: 0.3rem 1.1rem 0.1rem;
+}
+
+.md-typeset .admonition:is(.note, .tip, .hint, .info, .abstract),
+.md-typeset details:is(.note, .tip, .hint, .info, .abstract) {
+  border-color: var(--mk-sky);
+}
+
+.md-typeset .admonition-title,
+.md-typeset summary {
+  background-color: transparent !important;
+  border: 0;
+  color: #fff;
+  font-weight: 700;
+  margin: 0 -1.1rem;
+  padding-left: 2.6rem;
+}
+
+.md-typeset .admonition-title::before,
+.md-typeset summary::before {
+  left: 1.1rem;
+}
+
+.md-typeset :is(.admonition, details):is(.note, .tip, .hint, .info, .abstract) > :is(.admonition-title, summary)::before {
+  background-color: var(--mk-sky);
+}
+
+/* Buttons, including the cookie banner's: makimoto's .mk-btn. Material's
+   default primary button is navy, which vanishes on the navy page. */
+.md-typeset .md-button {
+  border: 1px solid rgb(255 255 255 / 0.32);
+  border-radius: var(--mk-radius-control);
+  color: #fff;
+  font-weight: 700;
+  transition: background-color 160ms var(--mk-ease-out-soft), border-color 160ms var(--mk-ease-out-soft), color 160ms var(--mk-ease-out-soft);
+}
+
+.md-typeset .md-button:hover,
+.md-typeset .md-button:focus-visible {
+  background-color: rgb(255 255 255 / 0.06);
+  border-color: #fff;
+  color: #fff;
+}
+
+.md-typeset .md-button--primary {
+  background-color: #fff;
+  border-color: #fff;
+  color: var(--mk-navy);
+}
+
+.md-typeset .md-button--primary:hover,
+.md-typeset .md-button--primary:focus-visible {
+  background-color: var(--mk-mist);
+  color: #fff;
+}
+
+.md-consent__overlay {
+  background-color: rgb(1 10 43 / 0.6);
+}
+
+.md-consent__inner {
+  background-color: var(--mk-navy-800);
+  border-top: 1px solid var(--mk-hairline);
+}
+
+/* Cards on the home page: makimoto's post card (.mk-post-card). The title
+   link stretches over the whole card so the card is one target. */
+.md-typeset .grid.cards > ul {
+  gap: 1rem;
+}
+
+.md-typeset .grid.cards > ul > li {
+  background-color: rgb(6 23 81 / 0.55);
+  border: 1px solid var(--mk-hairline);
+  border-radius: var(--mk-radius-card);
+  padding: 1.2rem 1.3rem;
+  position: relative;
+  transition: transform 240ms var(--mk-ease-out-soft), border-color 240ms var(--mk-ease-out-soft), box-shadow 240ms var(--mk-ease-out-soft);
+}
+
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid.cards > ul > li:focus-within {
+  border-color: rgb(118 198 255 / 0.45);
+  box-shadow: 0 30px 70px -40px rgb(118 198 255 / 0.5);
+  transform: translateY(-4px);
+}
+
+.md-typeset .grid.cards > ul > li > p {
+  margin: 0;
+}
+
+.md-typeset .grid.cards > ul > li > p + p {
+  color: var(--mk-text-muted);
+  font-size: 0.85em;
+  line-height: 1.6;
+  margin-top: 0.4em;
+}
+
+.md-typeset .grid.cards > ul > li a:not(.headerlink) {
+  color: #fff;
+  font-size: 1.05em;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.md-typeset .grid.cards > ul > li a::after {
+  border-radius: inherit;
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.md-typeset .grid.cards > ul > li:has(a:focus-visible) {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.md-typeset .grid.cards > ul > li a:focus-visible {
+  outline: none;
+}
+
+/* Footer: deep navy with makimoto's low radial glow. */
+.md-footer {
+  border-top: 1px solid var(--mk-hairline);
+}
+
+.md-footer__link {
+  border-radius: 14px;
+  margin: 0.6rem 0;
+  transition: background-color 160ms var(--mk-ease-out-soft), opacity 160ms;
+}
+
+.md-footer__link:hover,
+.md-footer__link:focus-visible {
+  background-color: rgb(255 255 255 / 0.05);
+  opacity: 1;
+}
+
+.md-footer__direction {
+  color: rgb(255 255 255 / 0.6);
+}
+
+.md-footer-meta {
+  background-image: radial-gradient(70% 100% at 50% 100%, rgb(24 61 178 / 0.32), rgb(98 0 237 / 0.1) 45%, transparent 75%);
+}
+
+.md-copyright {
+  color: rgb(255 255 255 / 0.6);
+}
+
+.md-copyright a {
+  color: rgb(255 255 255 / 0.75);
+}
+
+.md-social__link {
+  align-items: center;
+  border-radius: var(--mk-radius-control);
+  color: rgb(255 255 255 / 0.75);
+  display: inline-flex;
+  height: 2.2rem;
+  justify-content: center;
+  transition: background-color 160ms var(--mk-ease-out-soft), color 160ms var(--mk-ease-out-soft);
+  width: 2.2rem;
+}
+
+.md-social__link:hover,
+.md-social__link:focus-visible {
+  background-color: rgb(255 255 255 / 0.08);
+  color: #fff;
+}
+
+/* Footer link that reopens the cookie banner, styled as a small outlined
+   button so it reads as a control rather than part of the copyright line. */
+.md-copyright__consent {
+  border: 1px solid rgb(255 255 255 / 0.32);
+  border-radius: var(--mk-radius-control);
+  color: #fff;
+  display: block;
+  margin-top: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  transition: background-color 160ms var(--mk-ease-out-soft), border-color 160ms var(--mk-ease-out-soft);
+  width: fit-content;
+}
+
+.md-copyright .md-copyright__consent:hover,
+.md-copyright .md-copyright__consent:focus-visible {
+  background-color: rgb(255 255 255 / 0.06);
+  border-color: #fff;
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .grid.cards > ul > li:hover,
+  .md-typeset .grid.cards > ul > li:focus-within {
+    transform: none;
+  }
+}
