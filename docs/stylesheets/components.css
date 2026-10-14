@@ -51,6 +51,69 @@
   font-weight: 700;
 }
 
+/* Link back to the makimoto.ai landing page. On small screens it is a globe
+   icon like the other header buttons; once the search field is visible it
+   becomes an outlined pill matching that field's height and radius. */
+.mk-header__home {
+  align-items: center;
+  color: currentcolor;
+  display: flex;
+  flex-shrink: 0;
+  margin: 0.2rem;
+  padding: 0.4rem;
+  transition:
+    color 160ms var(--mk-ease-out-soft),
+    background-color 160ms var(--mk-ease-out-soft),
+    border-color 160ms var(--mk-ease-out-soft);
+}
+
+.mk-header__home svg {
+  display: block;
+  fill: currentcolor;
+  height: 1.2rem;
+  width: 1.2rem;
+}
+
+.mk-header__home-label,
+.mk-header__home-arrow {
+  display: none;
+}
+
+@media screen and (min-width: 60em) {
+  .mk-header__home {
+    border: 1px solid rgb(255 255 255 / 0.2);
+    border-radius: 12px;
+    color: var(--mk-text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    gap: 0.25rem;
+    height: 1.9rem;
+    margin: 0 0.6rem 0 0;
+    padding: 0 0.6rem 0 0.7rem;
+  }
+
+  .mk-header__home:hover,
+  .mk-header__home:focus-visible {
+    background-color: rgb(1 10 43 / 0.6);
+    border-color: rgb(255 255 255 / 0.45);
+    color: #fff;
+  }
+
+  .mk-header__home-globe {
+    display: none;
+  }
+
+  .mk-header__home-label,
+  .mk-header__home-arrow {
+    display: block;
+  }
+
+  .mk-header__home-arrow svg {
+    height: 0.8rem;
+    width: 0.8rem;
+  }
+}
+
 /* Search field: makimoto's search input (.mk-blog-search). */
 @media screen and (min-width: 60em) {
   .md-search__form {
@@ -309,6 +372,12 @@
   color: rgb(255 255 255 / 0.75);
 }
 
+/* Separate the copyright block (which ends in the consent button) from the
+   "Made with" line below it. */
+.md-copyright__highlight {
+  margin-bottom: 0.8rem;
+}
+
 .md-social__link {
   align-items: center;
   border-radius: var(--mk-radius-control);
@@ -333,7 +402,7 @@
   border-radius: var(--mk-radius-control);
   color: #fff;
   display: block;
-  margin-top: 0.4rem;
+  margin-top: 0.6rem;
   padding: 0.25rem 0.7rem;
   transition: background-color 160ms var(--mk-ease-out-soft), border-color 160ms var(--mk-ease-out-soft);
   width: fit-content;
