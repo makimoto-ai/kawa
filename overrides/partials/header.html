@@ -45,10 +45,8 @@
     {% if config.extra.alternate %}
       {% include "partials/alternate.html" %}
     {% endif %}
-    <a href="https://makimoto.ai" class="mk-header__home" title="Back to makimoto.ai" aria-label="Back to makimoto.ai">
-      <span class="mk-header__home-globe">{% include ".icons/material/web.svg" %}</span>
-      <span class="mk-header__home-label">Homepage</span>
-      <span class="mk-header__home-arrow">{% include ".icons/material/arrow-top-right.svg" %}</span>
+    <a href="https://makimoto.ai" class="md-header__button md-icon mk-header__home" title="Back to makimoto.ai" aria-label="Back to makimoto.ai">
+      {% include ".icons/material/web.svg" %}
     </a>
     {% if "material/search" in config.plugins %}
       {% set search = config.plugins["material/search"] | attr("config") %}
