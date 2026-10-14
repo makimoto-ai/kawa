@@ -51,6 +51,24 @@
   font-weight: 700;
 }
 
+/* Link back to the makimoto.ai landing page: a globe icon, sized like the
+   other header buttons, that brightens on hover. */
+.mk-header__home {
+  color: rgb(255 255 255 / 0.75);
+  transition: color 160ms var(--mk-ease-out-soft);
+}
+
+.mk-header__home:hover,
+.mk-header__home:focus-visible {
+  color: #fff;
+}
+
+@media screen and (min-width: 60em) {
+  .mk-header__home {
+    margin-right: 0.6rem;
+  }
+}
+
 /* Search field: makimoto's search input (.mk-blog-search). */
 @media screen and (min-width: 60em) {
   .md-search__form {
@@ -309,6 +327,12 @@
   color: rgb(255 255 255 / 0.75);
 }
 
+/* Separate the copyright block (which ends in the consent button) from the
+   "Made with" line below it. */
+.md-copyright__highlight {
+  margin-bottom: 0.8rem;
+}
+
 .md-social__link {
   align-items: center;
   border-radius: var(--mk-radius-control);
@@ -333,7 +357,7 @@
   border-radius: var(--mk-radius-control);
   color: #fff;
   display: block;
-  margin-top: 0.4rem;
+  margin-top: 0.6rem;
   padding: 0.25rem 0.7rem;
   transition: background-color 160ms var(--mk-ease-out-soft), border-color 160ms var(--mk-ease-out-soft);
   width: fit-content;
