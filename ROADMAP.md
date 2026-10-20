@@ -1,6 +1,6 @@
 # Roadmap
  
-This document is a high-level summary of where Kawa is going. The roadmap will be expanded with more specific milestones after the 1 July 2026 launch.
+This document is a high-level summary of where Kawa is going. Now that Phase 1 has shipped, the roadmap will be expanded with more specific milestones for the phases that follow.
  
 ## Phase 1: Launch (1 July 2026) ✅
  
