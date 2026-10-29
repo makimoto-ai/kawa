@@ -158,11 +158,15 @@ When the job fails, the response includes `error`:
   "job_id": "b3f1c2a4-9d7e-4a1b-8c2f-1e5d6a7b8c90",
   "status": "failed",
   "error": {
-    "code": "bad_audio",
-    "message": "Unsupported audio format"
+    "code": "invalid_audio",
+    "message": "The audio could not be decoded.",
+    "next_step": "Check that the file is a complete recording in a supported audio format, then submit it again.",
+    "docs_url": "https://docs.makimoto.ai/service/job-errors/#invalid_audio"
   }
 }
 ```
+
+See [Job Errors](job-errors.md) for every code and what to do about it.
 
 ## 6. Summarise or Tag the Transcript
 

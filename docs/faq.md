@@ -28,6 +28,10 @@ No. Per the quota constraint in [Supported Audio and Limits](service/api-referen
 
 ## Errors
 
+### Why did my job fail?
+
+A failed job's `error` gives a `code`, the cause in `message`, what to do in `next_step`, and a `docs_url` to the code's entry in [Job Errors](service/job-errors.md).
+
 ### Why am I getting a `401`?
 
 The API key is missing, invalid, expired, or revoked. See [Key Lifetime and Rotation](service/authentication.md#key-lifetime-and-rotation) for how keys expire and how to issue a fresh one.

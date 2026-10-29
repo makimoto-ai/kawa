@@ -8,6 +8,12 @@ For more info, (see the [FAQ](faq.md) and [ROADMAP.md](https://github.com/makimo
 
 For the Python SDK's own release history, see its [CHANGELOG.md](https://github.com/makimoto-ai/makimoto-python/blob/main/CHANGELOG.md).
 
+## Unreleased
+
+- A failed job's `error` now includes `next_step` (what to do about it) and `docs_url` (its entry in the new [Job Errors](service/job-errors.md) page).
+- `GET /v1/transcriptions` returns `error` on each failed row, so a list shows why a job failed without fetching it.
+- New error codes: `invalid_audio`, `transcription_timeout` and `unsupported_language`. Error messages are now written in plain words rather than passed on from the processing service.
+
 ## 2026-10-06
 
 - The Gradio playground has new **Summary** and **Tagging** tabs for pasted transcripts.
