@@ -10,6 +10,8 @@ This page serves as a reference for all endpoints available for Kawa services.
 
 The parameter, field and status code tables are generated from the [OpenAPI specification](../openapi.json) (`openapi.json`) each time the site is built, so they always match it. The examples and guidance between them are written by hand.
 
+Errors come in two kinds. A request that is refused gets an HTTP error at once; each endpoint's status codes below list them. A job that was accepted but then failed reports why in its `error`; every code is listed in [Job Errors](job-errors.md).
+
 To try these endpoints without writing code, fork the [Kawa collection](https://www.postman.com/makimoto-ai/makimoto-kawa-api/collection/9muqmgc/makimoto-transcription-api) into your own Postman workspace. In your fork, set the `raw_api_key` collection variable to your API key; every request authenticates with it from there.
 
 ::: openapi POST /v1/transcriptions
@@ -89,7 +91,7 @@ Every error response carries this same envelope: a machine-readable `code` and `
 | Constraint | Value | Response if exceeded |
 | --- | --- | --- |
 | Formats | MP3 and WAV only | `415 Unsupported Media Type` |
-| Maximum file size | 10 MB per upload | `413 Payload Too Large` |
+| Maximum file size | 15 MB through [`POST /v1/uploads`](#post-v1uploads); about 4 MB for a file sent in the request itself | `413 Payload Too Large` |
 | Audio content | Must be decodable with a readable duration | `400 Bad Request` |
 | Account quota | 1000 minutes of audio per month on the free allowance (failed jobs are not counted) | `429 Too Many Requests` |
 
@@ -100,14 +102,14 @@ Both single-channel (mono) and dual-channel (stereo) audio are accepted; see [Di
 
 Recommended encoding: WAV, 16-bit PCM, at a sample rate between 8 kHz (telephone band) and 16 kHz, which is plenty for speech.
 
-The 10 MB cap is reached at very different durations depending on encoding, so choose the format to fit the clip:
+The 15 MB cap is reached at very different durations depending on encoding, so choose the format to fit the clip:
 
-| Encoding | Approx. minutes in 10 MB |
+| Encoding | Approx. minutes in 15 MB |
 | --- | --- |
-| WAV PCM 16-bit, 8 kHz, stereo | ~5.5 |
-| WAV PCM 16-bit, 8 kHz, mono | ~11 |
-| MP3 128 kbps | ~11 |
-| MP3 32 kbps | ~44 |
+| WAV PCM 16-bit, 8 kHz, stereo | ~8 |
+| WAV PCM 16-bit, 8 kHz, mono | ~16 |
+| MP3 128 kbps | ~16 |
+| MP3 32 kbps | ~65 |
 
 !!! tip
     For anything longer than a short clip, try using MP3 or downmix WAV to mono to stay under the cap. The repository's `samples-audio/` directory contains ready-to-use test files in the supported formats.
@@ -115,6 +117,67 @@ The 10 MB cap is reached at very different durations depending on encoding, so c
 ### Diarisation
 
 Diarisation is currently stereo-only: the pipeline splits the two channels (left/right) and diarises by channel, rather than separating speakers within a single mixed signal. Each channel maps to a speaker index, labeled `speaker_id: 0` and `speaker_id: 1`.
+
+---
+
+::: openapi POST /v1/uploads
+
+### Example
+
+A file too large to send in the request itself (above about 4 MB) goes in three steps: start an upload, send the file straight to storage, then create the transcription from it.
+
+**1. Start the upload.** Request:
+
+```bash
+curl -sS -X POST "${MAKIMOTO_API_URL}/v1/uploads" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"filename": "call.mp3", "content_type": "audio/mpeg"}' > upload.json
+```
+
+Success (`201`):
+
+```json
+{
+  "upload_id": "5b0e7c2a-3f4d-4e8a-9b1c-2d3e4f5a6b7c",
+  "upload": {
+    "url": "https://example-audio-bucket.s3.ap-southeast-1.amazonaws.com/",
+    "fields": {
+      "Content-Type": "audio/mpeg",
+      "key": "audio/.../5b0e7c2a-3f4d-4e8a-9b1c-2d3e4f5a6b7c.mp3",
+      "Policy": "...",
+      "X-Amz-Signature": "..."
+    }
+  },
+  "expires_at": "2026-10-28T10:15:00.000Z",
+  "max_bytes": 15728640
+}
+```
+
+`fields` holds more entries than shown here; send them all, unchanged.
+
+**2. Send the file to `upload.url`** before `expires_at`, as `multipart/form-data`: every entry of `upload.fields` first, then the file as `file`. No API key: the form itself is the permission.
+
+```bash
+form=()
+while IFS= read -r field; do form+=(-F "$field"); done \
+  < <(jq -r '.upload.fields | to_entries[] | "\(.key)=\(.value)"' upload.json)
+
+curl -sS -X POST "$(jq -r .upload.url upload.json)" "${form[@]}" -F "file=@call.mp3"
+```
+
+Storage answers `204` with an empty body. It refuses an empty file, one larger than `max_bytes`, or a form whose fields were changed.
+
+**3. Create the transcription** with the `upload_id`, as JSON instead of a file. `language` and `metadata` work as they do for a file sent in the request:
+
+```bash
+curl -sS -X POST "${MAKIMOTO_API_URL}/v1/transcriptions" \
+  -H "Authorization: Bearer ${MAKIMOTO_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{\"upload_id\": \"$(jq -r .upload_id upload.json)\", \"language\": \"en\"}"
+```
+
+The response is the same `202` as [`POST /v1/transcriptions`](#post-v1transcriptions). One upload makes one job: sending this request again returns that job with `200`, so it is safe to retry if a response was lost. An upload that no transcription uses is deleted within a day.
 
 ---
 
@@ -218,12 +281,16 @@ Example `200` Response (`failed`):
   "status": "failed",
   "type": "transcription",
   "error": {
-    "code": "bad_audio",
-    "message": "Unsupported audio format"
+    "code": "invalid_audio",
+    "message": "The audio could not be decoded.",
+    "next_step": "Check that the file is a complete recording in a supported audio format, then submit it again.",
+    "docs_url": "https://docs.makimoto.ai/service/job-errors/#invalid_audio"
   },
   "requestId": "a7b8c9d0-e1f2-4345-a6b7-c8d9e0f1a2b3"
 }
 ```
+
+Every code a failed job can carry, with its cause and next step, is listed in [Job Errors](job-errors.md).
 
 ---
 
@@ -383,3 +450,7 @@ Example `202` Response:
   "requestId": "e1f2a3b4-c5d6-4789-e0f1-a2b3c4d5e6f7"
 }
 ```
+
+---
+
+::: openapi GET /v1/health

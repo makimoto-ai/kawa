@@ -15,6 +15,7 @@ nav:
       - Authentication: service/authentication.md
       - Walkthrough: service/walkthrough.md
       - API Reference: service/api-reference.md
+      - Job Errors: service/job-errors.md
   - SDKs:
       - Python:
           - Overview: sdks/python/index.md
