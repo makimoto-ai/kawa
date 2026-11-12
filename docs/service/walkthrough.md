@@ -113,6 +113,11 @@ Recommended polling behaviour:
 - Poll `GET /v1/transcriptions/{job_id}` every 2 to 5 seconds while status is
   `queued` or `processing`.
 - Stop when status is `succeeded` or `failed`.
+- Keep polling for at least 20 minutes before treating a job as stuck. After
+  an hour with no traffic, the models shut down to save cost, and the next job
+  waits while they start: about 5 minutes for a transcription and about 7 for
+  a summary or tags. The job stays `queued` or `processing` meanwhile and
+  finishes on its own. Later jobs run at normal speed.
 - Treat `401` as missing, expired, or revoked credentials.
 - Treat `403` as the job not belonging to the authenticated account.
 - Treat `404` as an unknown job id.
