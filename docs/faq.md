@@ -26,6 +26,10 @@ The free allowance is 1,000 minutes of audio per month.
 
 No. Per the quota constraint in [Supported Audio and Limits](service/api-reference.md#supported-audio-and-limits), failed jobs are not counted.
 
+### Why did my first job take several minutes?
+
+After an hour with no traffic, the models shut down to save cost. The next job starts them again, which takes about 5 minutes for a transcription and about 7 for a summary or tags. The job is not lost: it stays `queued` or `processing` and finishes on its own, and later jobs run at normal speed. Poll for at least 20 minutes before treating a job as stuck (see [polling](service/walkthrough.md)).
+
 ## Errors
 
 ### Why did my job fail?
