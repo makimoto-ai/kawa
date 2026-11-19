@@ -118,6 +118,10 @@ The 15 MB cap is reached at very different durations depending on encoding, so c
 
 Diarisation is currently stereo-only: the pipeline splits the two channels (left/right) and diarises by channel, rather than separating speakers within a single mixed signal. Each channel maps to a speaker index, labeled `speaker_id: 0` and `speaker_id: 1`.
 
+### Processing Time After an Idle Period
+
+After an hour with no traffic, the models shut down to save cost. The next job starts them again, which takes about 5 minutes for a transcription and about 7 for a summary or tags. The job is not lost: it stays `queued` or `processing` and finishes on its own, and later jobs run at normal speed. Keep polling for at least 20 minutes before treating a job as stuck (see the [polling guidance](walkthrough.md) and the [FAQ](../faq.md)).
+
 ---
 
 ::: openapi POST /v1/uploads
